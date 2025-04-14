@@ -1,112 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lucas Steinmetz | Portfolio</title>
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.css">
-<link rel="apple-touch-icon" href="img/logo.png">
-<link rel="icon" href="img/logo.png" type="image/png">
-<meta name="msapplication-TileImage" content="img/logo.png">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Command Prompt</title>
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
-
-<header class="bg-dark text-white p-4 text-center">
-    <h1>Lucas Steinmetz</h1>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto">
-                    <li class="nav-item active">
-                        <a class="nav-link" href="index.html">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="hobbies.html">Hobbies</a>
-                    </li>
-                    <a class="nav-link" href="resume.html">Resume</a>
-                    <li class="nav-item">
-                        <a class="nav-link" href="contact.html">Contact</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-</header>
-
-<div class="container mt-4">
-    <div class="row align-items-center">
-      <div class="col-md-8">
-        <h2 data-aos="fade-right" data-aos-delay="300" data-aos-offset="-400">Welcome to My World!</h2>
-        <p data-aos="fade-right" data-aos-delay="300" data-aos-offset="-400">
-            Hi! I’m Lucas Steinmetz, a Computer Science student with a minor 
-            in cybersecurity at Villanova University. My passion for technology 
-            drives my involvement in a variety of projects, from machine 
-            learning applications to data analytics in sports.
-        </p>
-        <p data-aos="fade-right" data-aos-delay="600" data-aos-offset="-400">
-            Why do I pursue these diverse challenges? It's the thrill of 
-            tackling complex problems and the drive to innovate across 
-            different fields. Each day offers a new opportunity to explore 
-            how technology can enhance our understanding and capabilities. 
-            This site reflects my journey, showcasing my projects, 
-            accomplishments, and the passions that inspire my ongoing 
-            exploration. Welcome to my world!
-        </p>
-      </div> 
-        <div class="col-md-4" data-aos="fade-left" data-aos-delay="100" data-aos-offset="-400">
-            <img src="img/lucas_profile.jpg" alt="Lucas Steinmetz" class="img-fluid rounded-circle">
-        </div>
+  <div class="terminal">
+    <div id="terminal-output"></div>
+    <div id="input-line">
+      <span class="prompt">C:\Users\visitor></span>
+      <input id="command" type="text" autocomplete="off" autofocus />
     </div>
-</div>
-
-<div class="container mt-5">
-  <h2 data-aos="fade-right" data-aos-delay="700" data-aos-offset="-400">Featured Projects</h2>
-  <div class="row">
-      <div class="col-md-6" data-aos="fade-right" data-aos-delay="700" data-aos-offset="-400">
-          <h3>Time Series Forecasting of COVID-19 Cases</h3>
-          <p>This project applies advanced machine learning techniques to forecast 
-            COVID-19 trends. Using comprehensive data analysis across multiple datasets, 
-            we've derived significant insights that aid in understanding the pandemic's 
-            dynamics. This includes identifying key factors that influence transmission 
-            rates and potential outbreak patterns.</p>
-          <object data="img/gencovid.pdf" type="application/pdf" width="100%" height="700px" style="margin-bottom: 20px;">
-              <p>Your browser does not support PDFs. Please download the 
-                PDF to view it: <a href="img/gencovid.pdf">Download PDF</a>.</p>
-          </object>
-      </div>
-      <div class="col-md-6" data-aos="fade-left" data-aos-delay="800" data-aos-offset="-400">
-          <h3>Golf Performance Analysis</h3>
-          <p>This study was conducted using publicly available golf statistics to 
-            optimize performance scores. While the project leverages comprehensive 
-            data analysis to enhance competitive strategies and outcomes, personal 
-            performance data from PGA professionals involved in the study cannot 
-            be shown due to confidentiality agreements.</p>
-          <object data="img/gengolf.pdf" type="application/pdf" width="100%" height="700px" style="margin-bottom: 20px;">
-              <p>Your browser does not support PDFs. Please download the PDF to view it: <a href="img/gengolf.pdf">Download PDF</a>.</p>
-          </object>
-      </div>
   </div>
-</div>
-
-
-
-<footer class="bg-dark text-white text-center p-3 mt-4">
-    <p>© 2024 Lucas Steinmetz</p>
-    <p>lsteinme@villanova.edu</p>
-    <p>(484)-587-3572</p>
-</footer>
-
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.js"></script>
-<script>
-    AOS.init();
-</script>
+  <script src="js/script.js"></script>
 </body>
 </html>
