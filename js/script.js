@@ -18,6 +18,12 @@ function appendLine(text = "") {
   outputElement.appendChild(lineElement);
 }
 
+function appendHTMLLine(html = "") {
+  const lineElement = document.createElement("div");
+  lineElement.innerHTML = html;
+  outputElement.appendChild(lineElement);
+}
+
 function appendCommandLine(cmd) {
   const lineElement = document.createElement("div");
   const promptSpan = document.createElement("span");
@@ -38,6 +44,21 @@ function processCommand(cmd) {
     case "help":
       appendLine("help  - Show available commands");
       appendLine("clear - Reset the terminal to its startup view");
+      appendLine("resume - Downloads resume");
+      appendLine("contact - Returns contact information");
+      appendLine("projects - Lists projects");
+      break;
+    case "resume":
+      appendHTMLLine('Download my resume: <a href="downloads/resume.pdf" download>resume.pdf</a>');
+      break;
+    case "contact":
+      appendHTMLLine('Email: <a href="mailto:lsteinme@villanova.edu" target="_blank">lsteinme@villanova.edu</a>');
+      appendHTMLLine('LinkedIn: <a href="https://www.linkedin.com/in/lsteinm/" target="_blank">linkedin.com/in/lsteinm</a>');
+      break;
+    case "projects":
+      appendHTMLLine('<a href="https://github.com/ljste/rustproxy" target="_blank">rustproxy</a>: A lightweight configurable async TCP proxy written in Rust.');
+      appendHTMLLine('<a href="https://github.com/ljste/stowaway" target="_blank">stowaway</a>: Rust CLI wrapper that limits syscalls and tightens network rules when running a subprocess.');
+      appendHTMLLine('<a href="https://github.com/ljste/gonuke" target="_blank">gonuke</a>: CLI nuker to search for and force-kill processes matching a regex.');
       break;
     default:
       if (cmd) {
