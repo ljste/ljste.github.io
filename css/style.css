@@ -1,53 +1,141 @@
+:root {
+  --bg-color: #000000;
+  --text-color: #FFFFFF;
+  --link-color: #AAAAAA;
+  --link-hover-color: #FFFFFF;
+  --cursor-color: #FFFFFF;
+  --prompt-color: var(--text-color);
+}
+
 html, body {
-  margin: 0; padding: 0; background: #000; color: #fff;
-  font-family: Consolas, "Courier New", monospace; font-size: 16px; line-height: 1.4;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 16px;
+  line-height: 1.4;
 }
+
 .terminal {
-  width: 100%; min-height: 100vh; box-sizing: border-box; padding: 16px; position: relative;
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  position: relative;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
+
 #terminal-output {
-  white-space: pre-wrap; margin: 0; padding: 0; font-size: inherit; line-height: inherit;
-  max-height: calc(100vh - 50px); overflow-y: auto;
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+  max-height: calc(100vh - 50px);
+  overflow-y: auto;
 }
-#terminal-output div { display: block; margin: 0; padding: 0; font-size: inherit; line-height: inherit; }
+
+#terminal-output div {
+  display: block;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
 #input-line {
-  display: flex; align-items: baseline; margin: 0; padding: 0; font-size: inherit; line-height: inherit;
+  display: flex;
+  align-items: baseline;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
 }
-.prompt { margin-right: 5px; white-space: nowrap; flex-shrink: 0; }
+
+.prompt {
+  margin-right: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--prompt-color);
+}
+
 #input-wrapper {
   position: relative;
   flex-grow: 1;
   display: flex;
   align-items: baseline;
 }
+
 #command {
   flex-grow: 0;
   width: 100%;
-  background: transparent; border: none; color: #fff;
-  font-size: inherit; font-family: inherit; line-height: inherit;
-  outline: none; padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  outline: none;
+  padding: 0;
 }
-#command:focus { outline: none; caret-color: transparent; }
+
+#command:focus {
+  outline: none;
+  caret-color: transparent;
+}
+
 #cursor {
   position: absolute;
   top: 0;
   left: 0;
   display: inline-block;
-  background: #fff;
-  width: 0.6em; height: 1.3em;
+  background: var(--cursor-color);
+  width: 0.6em;
+  height: 1.3em;
   vertical-align: baseline;
   visibility: hidden;
   animation: blink 1s step-end infinite;
   pointer-events: none;
   z-index: 1;
 }
-#cursor::before { content: ''; display: inline-block; width: 100%; height: 100%; }
-@keyframes blink {
-  0%, 100% { background-color: #fff; }
-  50% { background-color: transparent; }
+
+#cursor::before {
+  content: '';
+  display: inline-block;
+  width: 100%;
+  height: 100%;
 }
+
+@keyframes blink {
+  0%, 100% { background-color: var(--cursor-color); opacity: 1; }
+  50% { background-color: var(--cursor-color); opacity: 0; }
+}
+
 #command:focus + #cursor {
   visibility: visible;
 }
-a.output-link { color: #aaa; text-decoration: underline; }
-a.output-link:hover { color: #fff; }
+
+a.output-link {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+
+a.output-link:hover {
+  color: var(--link-hover-color);
+}
+
+#terminal-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+#terminal-output::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+#terminal-output::-webkit-scrollbar-thumb {
+  background-color: var(--text-color);
+  border-radius: 4px;
+  border: 2px solid var(--bg-color);
+}
