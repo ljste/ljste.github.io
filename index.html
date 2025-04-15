@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Command Prompt</title>
-  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="terminal">
     <div id="terminal-output"></div>
     <div id="input-line">
       <span class="prompt">C:\Users\visitor></span>
-      <input id="command" type="text" autocomplete="off" autofocus />
+      <div id="input-wrapper">
+        <input id="command" type="text" autocomplete="off" spellcheck="false" autofocus>
+        <span id="cursor"></span>
+      </div>
     </div>
   </div>
   <script src="js/script.js"></script>
