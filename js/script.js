@@ -8,7 +8,7 @@ const startupBanner = `Microsoft Windows [Version 10.0.26100.3476]
 
 Welcome to lucas's portfolio.
 Type 'help' for commands.`;
-const availableCommands = ['help', 'clear', 'resume', 'contact', 'projects'];
+const availableCommands = ['help', 'clear', 'resume', 'contact', 'projects', 'about'];
 let commandHistory = [];
 let historyIndex = 0;
 let currentCommand = '';
@@ -96,6 +96,7 @@ const processCommand = (cmd) => {
             appendLine("  resume    - Download my resume");
             appendLine("  contact   - Show contact information");
             appendLine("  projects  - List my notable projects");
+            appendLine("  about     - Show information about me");
             appendLine();
             break;
         case "resume":
@@ -112,13 +113,30 @@ const processCommand = (cmd) => {
         case "projects":
             appendLine();
             appendLine("  My Projects:");
-            appendHTMLLine('  * <a href="https://github.com/ljste/rustproxy" class="output-link" target="_blank">rustproxy</a>: Lightweight configurable async TCP proxy (Rust).');
-            appendHTMLLine('  * <a href="https://github.com/ljste/stowaway" class="output-link" target="_blank">stowaway</a>:  CLI wrapper for syscall/network sandboxing (Rust).');
-            appendHTMLLine('  * <a href="https://github.com/ljste/gonuke" class="output-link" target="_blank">gonuke</a>:    CLI process nuker based on regex matching (Go).');
+            appendHTMLLine('  * <a href="https://github.com/ljste/rustproxy" class="output-link" target="_blank">rustproxy</a>:    Lightweight configurable async TCP proxy (Rust).');
+            appendHTMLLine('  * <a href="https://github.com/ljste/stowaway" class="output-link" target="_blank">stowaway</a>:     CLI wrapper for syscall/network sandboxing (Rust).');
+            appendHTMLLine('  * <a href="https://github.com/ljste/gonuke" class="output-link" target="_blank">gonuke</a>:       CLI process nuker based on regex matching (Go).');
+            appendHTMLLine('  * <a href="https://ljste.github.io/3d-portfolio/" class="output-link" target="_blank">3D Portfolio</a>: Try to hack into my laptop (three.js).' );
+            appendLine();
+            break;
+        case "about":
+            appendLine();
+            appendLine("╔════════════════════════════════════════════╗");
+            appendLine("║                  About Me                  ║");
+            appendLine("╠════════════════════════════════════════════╣");
+            appendLine("║ CS + Cybersecurity @ Villanova             ║");
+            appendLine("║ Tech explorer                              ║");
+            appendLine("║ Builds PCs, reverse engineers games        ║");
+            appendLine("║ Creates personal tools for fun             ║");
+            appendLine("║ Golf & squash enthusiast                   ║");
+            appendLine("║ Building with AI, parsers, 3D UIs          ║");
+            appendLine("║ Type 'projects' for more                   ║");
+            appendLine("╚════════════════════════════════════════════╝");
             appendLine();
             break;
         case "":
             break;
+
         default:
             appendLine();
             appendLine(`'${cmd}' is not recognized as an internal or external command,`);
