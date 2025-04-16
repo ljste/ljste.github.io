@@ -239,7 +239,7 @@ const processCommand = (cmd) => {
                 switch(c) {
                     case 'help': description = "Show available commands"; break;
                     case 'clear': description = "Clear the terminal screen"; break;
-                    case 'resume': description = "Download my resume"; break;
+                    case 'resume': description = "View my resume"; break;
                     case 'contact': description = "Show contact information"; break;
                     case 'projects': description = "List summary of notable projects"; break;
                     case 'project': description = "Open a specific project (e.g., project open rustproxy)"; break;
@@ -254,7 +254,9 @@ const processCommand = (cmd) => {
 
         case "resume":
             appendLine();
-            appendHTMLLine('  Download my resume: <a href="downloads/resume.pdf" class="output-link" download>resume.pdf</a>');
+            const resumeUrl = "downloads/resume.pdf";
+            window.open(resumeUrl, "_blank", "noopener,noreferrer");
+            appendLine(`  Opening resume.pdf in a new tab...`);
             appendLine();
             break;
 
