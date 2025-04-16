@@ -256,7 +256,7 @@ const processCommand = (cmd) => {
             appendLine();
             const resumeUrl = "downloads/resume.pdf";
             window.open(resumeUrl, "_blank", "noopener,noreferrer");
-            appendLine(`  Opening resume.pdf in a new tab...`);
+            appendLine(`  Opening resume.pdf...`);
             appendLine();
             break;
 
