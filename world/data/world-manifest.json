@@ -1,0 +1,143 @@
+{
+  "layout": {
+    "width": 960,
+    "height": 640,
+    "tileSize": 24
+  },
+  "stations": {
+    "quest-board": {
+      "label": "Quest Board",
+      "x": 480,
+      "y": 110,
+      "width": 160,
+      "height": 76,
+      "kind": "board",
+      "workSlots": [
+        { "x": 440, "y": 166 },
+        { "x": 480, "y": 166 },
+        { "x": 520, "y": 166 }
+      ]
+    },
+    "dispatch-hall": {
+      "label": "Dispatch Hall",
+      "x": 480,
+      "y": 282,
+      "width": 200,
+      "height": 116,
+      "kind": "hall"
+    },
+    "coder-forge": {
+      "label": "Coder Forge",
+      "x": 218,
+      "y": 242,
+      "width": 168,
+      "height": 100,
+      "kind": "workshop"
+    },
+    "researcher-library": {
+      "label": "Researcher Library",
+      "x": 742,
+      "y": 240,
+      "width": 174,
+      "height": 106,
+      "kind": "library"
+    },
+    "curator-archive": {
+      "label": "Curator Archive",
+      "x": 222,
+      "y": 492,
+      "width": 170,
+      "height": 98,
+      "kind": "archive"
+    },
+    "slacker-tower": {
+      "label": "Signal Tower",
+      "x": 742,
+      "y": 488,
+      "width": 156,
+      "height": 98,
+      "kind": "tower"
+    },
+    "philosopher-garden": {
+      "label": "Garden Shrine",
+      "x": 480,
+      "y": 530,
+      "width": 180,
+      "height": 88,
+      "kind": "garden"
+    },
+    "guesthouse-a": {
+      "label": "Guesthouse A",
+      "x": 110,
+      "y": 110,
+      "width": 118,
+      "height": 74,
+      "kind": "guesthouse"
+    },
+    "guesthouse-b": {
+      "label": "Guesthouse B",
+      "x": 850,
+      "y": 110,
+      "width": 118,
+      "height": 74,
+      "kind": "guesthouse"
+    },
+    "guesthouse-c": {
+      "label": "Guesthouse C",
+      "x": 110,
+      "y": 598,
+      "width": 118,
+      "height": 74,
+      "kind": "guesthouse"
+    }
+  },
+  "fallbackStations": [
+    "guesthouse-a",
+    "guesthouse-b",
+    "guesthouse-c"
+  ],
+  "agents": {
+    "main": {
+      "displayName": "Jarvis",
+      "stationId": "dispatch-hall",
+      "spriteKey": "jarvis",
+      "publicRoleLabel": "coordinating the team",
+      "palette": ["#f6f6ff", "#4566f5"]
+    },
+    "coder": {
+      "displayName": "Coder",
+      "stationId": "coder-forge",
+      "spriteKey": "coder",
+      "publicRoleLabel": "writing code",
+      "palette": ["#fff3dd", "#ff8b2c"]
+    },
+    "researcher": {
+      "displayName": "Researcher",
+      "stationId": "researcher-library",
+      "spriteKey": "researcher",
+      "publicRoleLabel": "researching a web question",
+      "palette": ["#e6fff6", "#18a06d"]
+    },
+    "curator": {
+      "displayName": "Curator",
+      "stationId": "curator-archive",
+      "spriteKey": "curator",
+      "publicRoleLabel": "curating memory",
+      "palette": ["#fff0f5", "#d43f7a"]
+    },
+    "slacker": {
+      "displayName": "Slacker",
+      "stationId": "slacker-tower",
+      "spriteKey": "slacker",
+      "publicRoleLabel": "preparing a Slack digest",
+      "palette": ["#f2edff", "#6a4de8"]
+    },
+    "philosopher": {
+      "displayName": "Philosopher",
+      "stationId": "philosopher-garden",
+      "spriteKey": "philosopher",
+      "publicRoleLabel": "reviewing the system",
+      "palette": ["#f4ffe6", "#6ca728"]
+    }
+  }
+}

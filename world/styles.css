@@ -1,0 +1,190 @@
+:root {
+  --bg: #102233;
+  --panel: rgba(9, 16, 26, 0.88);
+  --panel-soft: rgba(17, 28, 43, 0.72);
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #eaf3ff;
+  --muted: #9eb4cc;
+  --accent: #7cc4ff;
+  --guest: #68d391;
+  --admin: #f6ad55;
+  --danger: #ff7b7b;
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(72, 122, 255, 0.16), transparent 32%),
+    linear-gradient(180deg, #16324b 0%, #0b1522 100%);
+  color: var(--text);
+}
+
+body { padding: 18px; }
+
+.world-shell {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(560px, 1fr) minmax(280px, 360px);
+  gap: 18px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.panel-pad { padding: 18px; }
+.sidebar { display: grid; gap: 16px; }
+.hero { display: grid; gap: 10px; }
+.eyebrow { color: var(--accent); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.hero h1, .panel h2, .panel h3 { margin: 0; line-height: 1.05; }
+.hero p, .meta-line, .card p, .task-subtext, .event-time, .hint { margin: 0; color: var(--muted); }
+.stat-row, .toolbar, .mode-row, .control-row, .auth-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.9rem;
+}
+
+.pill.guest { color: var(--guest); }
+.pill.admin { color: var(--admin); }
+.pill.offline { color: var(--danger); }
+
+.world-stage {
+  position: relative;
+  min-height: 760px;
+  overflow: hidden;
+}
+
+#world-game {
+  width: 100%;
+  height: 100%;
+  min-height: 760px;
+}
+
+.overlay-card {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.overlay-card > * { pointer-events: auto; }
+
+.hud {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  min-width: 220px;
+}
+
+.hud strong { display: block; margin-bottom: 6px; }
+.form-stack { display: grid; gap: 10px; }
+
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input,
+textarea,
+button { font: inherit; }
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 11px 12px;
+}
+
+textarea { min-height: 112px; resize: vertical; }
+
+button {
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #5ab0ff, #6f6cff);
+  color: #07131f;
+  font-weight: 700;
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+button:disabled { cursor: wait; opacity: 0.65; }
+.cards, .task-list, .event-list { display: grid; gap: 10px; }
+
+.card,
+.task-item,
+.event-item {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.card-header,
+.task-header,
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.status-idle { background: #8aa5bf; }
+.status-moving { background: #76c7ff; }
+.status-working { background: #68d391; }
+.status-offline { background: #ff7b7b; }
+.card small, .task-item small, .event-item small { color: var(--muted); }
+.mono { font-family: Consolas, "Courier New", monospace; }
+.hidden { display: none !important; }
+
+.message-box {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1260px) {
+  .world-shell { grid-template-columns: 1fr; }
+  .world-stage { order: -1; }
+}

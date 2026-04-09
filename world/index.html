@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jarvis World</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="world-shell">
+      <aside class="sidebar">
+        <section class="panel panel-pad hero">
+          <span class="eyebrow">Public Tiny-Town Observatory</span>
+          <h1>Jarvis World</h1>
+          <p>Watch Jarvis and the crew move through a little pixel town. Guest mode stays private-friendly. Admin mode unlocks deeper detail and one dispatch lane into Jarvis.</p>
+          <div class="stat-row" id="mode-pills">
+            <span class="pill guest" id="guest-pill">Guest mode</span>
+            <span class="pill hidden" id="admin-pill">Admin mode</span>
+          </div>
+        </section>
+
+        <section class="panel panel-pad">
+          <div class="toolbar">
+            <div>
+              <h2>Bridge</h2>
+              <p class="meta-line">Point the public world at your private bridge.</p>
+            </div>
+          </div>
+          <div class="form-stack">
+            <label>
+              Bridge URL
+              <input id="api-base-input" type="text" placeholder="http://127.0.0.1:4318">
+            </label>
+            <div class="control-row">
+              <button type="button" id="save-api-base">Save bridge URL</button>
+              <button type="button" class="secondary" id="refresh-state">Refresh now</button>
+            </div>
+            <p class="hint" id="bridge-status">Waiting for the bridge.</p>
+          </div>
+        </section>
+
+        <section class="panel panel-pad">
+          <h2>Agents</h2>
+          <p class="meta-line">Guest mode shows high-level activity only.</p>
+          <div class="cards" id="agent-cards"></div>
+        </section>
+      </aside>
+
+      <section class="panel world-stage">
+        <div id="world-game"></div>
+        <div class="overlay-card">
+          <div class="hud">
+            <strong id="hud-title">Live town status</strong>
+            <div class="meta-line" id="hud-subtitle">Polling every 5 seconds.</div>
+          </div>
+          <div class="hud">
+            <strong>System</strong>
+            <div class="meta-line" id="system-line">Bridge offline.</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <section class="panel panel-pad">
+          <h2>Admin Gate</h2>
+          <p class="meta-line">Password unlocks richer detail and Jarvis dispatch. Guest mode never exposes private work.</p>
+          <form class="form-stack" id="login-form">
+            <label>
+              Password
+              <input id="password-input" type="password" autocomplete="current-password" placeholder="Enter admin password">
+            </label>
+            <div class="auth-row">
+              <button type="submit" id="login-button">Unlock admin mode</button>
+              <button type="button" class="secondary hidden" id="logout-button">Log out</button>
+            </div>
+          </form>
+          <p class="hint" id="auth-status">Guest mode active.</p>
+        </section>
+
+        <section class="panel panel-pad">
+          <h2>Tasks</h2>
+          <p class="meta-line">Quest-board activity from cron and delegation runs.</p>
+          <div class="task-list" id="task-list"></div>
+        </section>
+
+        <section class="panel panel-pad">
+          <h2>Events</h2>
+          <p class="meta-line">Recent town activity.</p>
+          <div class="event-list" id="event-list"></div>
+        </section>
+
+        <section class="panel panel-pad hidden" id="dispatch-panel">
+          <h2>Dispatch Jarvis</h2>
+          <p class="meta-line">Admin can send one freeform instruction to Jarvis. Subagents still route through him.</p>
+          <form class="form-stack" id="dispatch-form">
+            <label>
+              Instruction
+              <textarea id="dispatch-input" placeholder="Example: Ask coder to inspect the latest plugin error and report back."></textarea>
+            </label>
+            <button type="submit" id="dispatch-button">Send to Jarvis</button>
+          </form>
+          <div class="message-box hidden" id="dispatch-result"></div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
