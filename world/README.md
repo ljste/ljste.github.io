@@ -13,6 +13,7 @@ Public static frontend for the Jarvis tiny-town observatory.
 - Guest mode shows a sanitized live world.
 - Admin mode talks to the private bridge and unlocks richer detail plus one control: dispatching a message to Jarvis.
 - The frontend polls the bridge every 5 seconds and animates between snapshots.
+- The deployed site should learn its bridge URL from `data/bridge-config.json`, not from per-device manual input.
 
 ## Add a new agent later
 
@@ -24,4 +25,9 @@ Public static frontend for the Jarvis tiny-town observatory.
 
 - Start the private bridge from its private sibling folder.
 - Serve this folder with any static server, or open it via your local site workflow.
-- Update the bridge URL in the world UI if you are not using the default local bridge port.
+
+## Bridge deployment
+
+- Put the public bridge URL in `data/bridge-config.json`.
+- For admin mode across devices, the bridge must be public HTTPS and must allow the deployed site origin.
+- The bridge controls are hidden by default because the intended setup is one configured bridge URL for everyone, not per-user manual entry.

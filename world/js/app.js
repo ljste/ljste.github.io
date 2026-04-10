@@ -1,6 +1,6 @@
 import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js";
 import { createDemoState } from "./demo-state.js";
-import { bindUiElements, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js";
+import { bindUiElements, renderBridgePanel, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js";
 import { JarvisWorldScene } from "./world-scene.js";
 
 const ui = bindUiElements();
@@ -15,6 +15,83 @@ const appState = {
 async function loadManifest() {
   const response = await fetch("./data/world-manifest.json");
   return response.json();
+}
+
+async function loadBridgeConfig() {
+  const path = window.JARVIS_WORLD_CONFIG.bridgeConfigPath || "./data/bridge-config.json";
+  try {
+    const response = await fetch(path, { cache: "no-store" });
+    if (!response.ok) {
+      return {};
+    }
+    return response.json();
+  } catch {
+    return {};
+  }
+}
+
+function getBridgeCandidates(bridgeConfig) {
+  const configured = [];
+  const runtimeConfig = window.JARVIS_WORLD_CONFIG || {};
+
+  const add = (value) => {
+    const normalized = String(value || "").trim().replace(/\/$/, "");
+    if (normalized && !configured.includes(normalized)) {
+      configured.push(normalized);
+    }
+  };
+
+  add(localStorage.getItem("jarvis-world-api-base"));
+  add(bridgeConfig.apiBaseUrl);
+  add(runtimeConfig.defaultApiBaseUrl);
+
+  const candidates = []
+    .concat(runtimeConfig.bridgeCandidates || [])
+    .concat(bridgeConfig.bridgeCandidates || []);
+
+  for (const candidate of candidates) {
+    add(candidate);
+  }
+
+  if (window.location.protocol.startsWith("http")) {
+    add(`${window.location.origin}`);
+
+    const host = window.location.hostname;
+    const protocol = window.location.protocol;
+    if (host && !host.startsWith("127.") && host !== "localhost") {
+      const parts = host.split(".");
+      if (parts.length >= 2) {
+        const rootDomain = parts.slice(-2).join(".");
+        add(`${protocol}//bridge.${rootDomain}`);
+        add(`${protocol}//api.${rootDomain}`);
+      }
+    }
+
+    if (host === "127.0.0.1" || host === "localhost") {
+      add(`${protocol}//${host}:4318`);
+    }
+  }
+
+  return configured;
+}
+
+async function chooseWorkingBridge(candidates) {
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(`${candidate}/world-api/health`, {
+        credentials: "omit",
+        mode: "cors",
+        cache: "no-store"
+      });
+      if (response.ok) {
+        return candidate;
+      }
+    } catch {
+      // Keep trying candidates.
+    }
+  }
+
+  return "";
 }
 
 function createGame(manifest) {
@@ -37,7 +114,7 @@ async function refreshState() {
   if (!apiBase) {
     const demo = createDemoState(appState.manifest, appState.isAdmin ? "admin" : "guest");
     appState.lastWorldState = demo;
-    renderBridgeStatus(ui, "Add a bridge URL to connect live data.", false);
+    renderBridgeStatus(ui, "No live bridge configured yet. The town is showing safe demo mode.", false);
     renderState(ui, demo, appState.isAdmin);
     appState.scene.setState(demo, appState.isAdmin);
     return;
@@ -52,7 +129,7 @@ async function refreshState() {
   } catch (error) {
     const demo = createDemoState(appState.manifest, appState.isAdmin ? "admin" : "guest");
     appState.lastWorldState = demo;
-    renderBridgeStatus(ui, `${error.message}. Falling back to demo town.`, false);
+    renderBridgeStatus(ui, `${error.message}. Check your public bridge URL and bridge CORS/cookie settings.`, false);
     renderState(ui, demo, appState.isAdmin);
     appState.scene.setState(demo, appState.isAdmin);
   }
@@ -67,6 +144,7 @@ function startPolling() {
 
 function wireUi() {
   ui.apiBaseInput.value = getApiBase();
+  renderBridgePanel(ui, Boolean(window.JARVIS_WORLD_CONFIG.showBridgeControls));
 
   ui.saveApiBaseButton.addEventListener("click", () => {
     const value = setStoredApiBase(ui.apiBaseInput.value);
@@ -125,6 +203,19 @@ function wireUi() {
 
 async function main() {
   appState.manifest = await loadManifest();
+  const bridgeConfig = await loadBridgeConfig();
+  if (!getApiBase()) {
+    const chosen = await chooseWorkingBridge(getBridgeCandidates(bridgeConfig));
+    if (chosen) {
+      setStoredApiBase(chosen);
+    }
+  }
+  window.JARVIS_WORLD_CONFIG.showBridgeControls = Boolean(
+    bridgeConfig.showBridgeControls ?? window.JARVIS_WORLD_CONFIG.showBridgeControls
+  );
+  if (bridgeConfig.allowManualBridgeOverride === false) {
+    window.JARVIS_WORLD_CONFIG.showBridgeControls = false;
+  }
   appState.scene = createGame(appState.manifest);
   wireUi();
   renderMode(ui, false);

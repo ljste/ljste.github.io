@@ -18,14 +18,19 @@ function buildUrl(pathname) {
 }
 
 async function request(pathname, options = {}) {
-  const response = await fetch(buildUrl(pathname), {
-    credentials: "include",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
-  });
+  let response;
+  try {
+    response = await fetch(buildUrl(pathname), {
+      credentials: "include",
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    });
+  } catch (error) {
+    throw new Error("Bridge unreachable from this browser. It usually means the public site has the wrong bridge URL, the bridge is not public HTTPS, or CORS is not allowing this site.");
+  }
 
   const data = await response.json().catch(() => ({ ok: false, error: "Invalid JSON response." }));
   if (!response.ok) {

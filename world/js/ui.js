@@ -18,6 +18,7 @@ export function bindUiElements() {
   return {
     guestPill: document.getElementById("guest-pill"),
     adminPill: document.getElementById("admin-pill"),
+    bridgePanel: document.getElementById("bridge-panel"),
     agentCards: document.getElementById("agent-cards"),
     taskList: document.getElementById("task-list"),
     eventList: document.getElementById("event-list"),
@@ -47,6 +48,10 @@ export function renderMode(ui, isAdmin) {
   ui.logoutButton.classList.toggle("hidden", !isAdmin);
   ui.dispatchPanel.classList.toggle("hidden", !isAdmin);
   ui.authStatus.textContent = isAdmin ? "Admin mode unlocked." : "Guest mode active.";
+}
+
+export function renderBridgePanel(ui, isVisible) {
+  ui.bridgePanel.classList.toggle("hidden", !isVisible);
 }
 
 export function renderBridgeStatus(ui, message, isHealthy) {
