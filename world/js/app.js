@@ -1,5 +1,5 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410f";
-import { createDemoState } from "./demo-state.js?v=20260410f";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410g";
+import { createDemoState } from "./demo-state.js?v=20260410g";
 import {
   bindUiElements,
   setGateVisible,
@@ -9,8 +9,8 @@ import {
   renderBridgeStatus,
   renderState,
   showDispatchResult
-} from "./ui.js?v=20260410f";
-import { JarvisWorldScene } from "./world-scene.js?v=20260410f";
+} from "./ui.js?v=20260410g";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410g";
 
 const ui = bindUiElements();
 const appState = {

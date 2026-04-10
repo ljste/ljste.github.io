@@ -24,7 +24,9 @@ async function request(pathname, options = {}) {
       credentials: options.credentials || "omit",
       ...options,
       headers: {
+        Accept: "application/json",
         "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
         ...(options.headers || {})
       }
     });
@@ -32,7 +34,10 @@ async function request(pathname, options = {}) {
     throw new Error("Bridge unreachable from this browser. It usually means the public site has the wrong bridge URL, the bridge is not public HTTPS, or CORS is not allowing this site.");
   }
 
-  const data = await response.json().catch(() => ({ ok: false, error: "Invalid JSON response." }));
+  const data = await response.json().catch(() => ({
+    ok: false,
+    error: "Invalid JSON response. The bridge may be returning HTML instead of JSON."
+  }));
   if (!response.ok) {
     const message = data?.error || `Request failed with ${response.status}`;
     throw new Error(message);
