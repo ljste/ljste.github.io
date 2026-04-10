@@ -1,5 +1,5 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase, clearStoredApiBase } from "./api.js?v=20260410i";
-import { createDemoState } from "./demo-state.js?v=20260410i";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase, clearStoredApiBase, clearAdminToken } from "./api.js?v=20260410j";
+import { createDemoState } from "./demo-state.js?v=20260410j";
 import {
   bindUiElements,
   setGateVisible,
@@ -9,8 +9,8 @@ import {
   renderBridgeStatus,
   renderState,
   showDispatchResult
-} from "./ui.js?v=20260410i";
-import { JarvisWorldScene } from "./world-scene.js?v=20260410i";
+} from "./ui.js?v=20260410j";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410j";
 
 const ui = bindUiElements();
 const appState = {
@@ -164,6 +164,7 @@ async function refreshState() {
     renderWorldState(payload.state);
   } catch (error) {
     if (appState.isAdmin && error.message.includes("Admin login required")) {
+      clearAdminToken();
       setEnteredMode(null);
       setGateVisible(ui, true, "Your admin session expired. Unlock admin mode again or continue as guest.");
       try {
@@ -288,6 +289,7 @@ function wireUi() {
 
   ui.logoutButton.addEventListener("click", async () => {
     await logout().catch(() => null);
+    clearAdminToken();
     setEnteredMode(null);
     appState.isAdmin = false;
     setGateVisible(ui, true, "You logged out. Choose guest mode or unlock admin again.");

@@ -5,6 +5,8 @@ function manualOverrideAllowed() {
   );
 }
 
+const ADMIN_TOKEN_KEY = "jarvis-world-admin-token";
+
 function getConfiguredApiBase() {
   return String(
     window.JARVIS_WORLD_CONFIG.bridgeConfig?.apiBaseUrl
@@ -39,6 +41,24 @@ export function clearStoredApiBase() {
   localStorage.removeItem("jarvis-world-api-base");
 }
 
+function getAdminToken() {
+  return String(localStorage.getItem(ADMIN_TOKEN_KEY) || "").trim();
+}
+
+function setAdminToken(token) {
+  const normalized = String(token || "").trim();
+  if (normalized) {
+    localStorage.setItem(ADMIN_TOKEN_KEY, normalized);
+  } else {
+    localStorage.removeItem(ADMIN_TOKEN_KEY);
+  }
+  return normalized;
+}
+
+export function clearAdminToken() {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+}
+
 export function getApiBase() {
   return getStoredApiBase();
 }
@@ -50,6 +70,7 @@ function buildUrl(pathname) {
 
 async function request(pathname, options = {}) {
   let response;
+  const adminToken = getAdminToken();
   try {
     response = await fetch(buildUrl(pathname), {
       cache: "no-store",
@@ -59,6 +80,7 @@ async function request(pathname, options = {}) {
         Accept: "application/json",
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
+        ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
         ...(options.headers || {})
       }
     });
@@ -90,19 +112,23 @@ export async function fetchAdminState() {
 }
 
 export async function login(password) {
-  return request("/world-api/admin/login", {
+  const payload = await request("/world-api/admin/login", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify({ password })
   });
+  setAdminToken(payload.token || "");
+  return payload;
 }
 
 export async function logout() {
-  return request("/world-api/admin/logout", {
+  const payload = await request("/world-api/admin/logout", {
     method: "POST",
     credentials: "include",
     body: JSON.stringify({})
   });
+  clearAdminToken();
+  return payload;
 }
 
 export async function dispatch(message) {
