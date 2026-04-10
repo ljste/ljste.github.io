@@ -40,8 +40,11 @@ Public static frontend for the Jarvis World observatory.
 - Camera controls:
   - left-click and drag to pan across the village like a map
   - right-click and drag to orbit
-  - scroll or trackpad pinch to zoom
-  - two-finger drag / twist rotates and zooms on touch devices
+  - mouse wheel zooms
+  - two-finger trackpad drag pans the world
+  - trackpad pinch zooms
+  - Shift-scroll or two-finger twist rotates on supported devices/browsers
+  - two-finger touch drag / pinch / twist zooms and rotates on touch devices
   - arrow keys pan when the scene is focused
 - Admin interaction:
   - click any gnome or agent card in admin mode to open its detail view in the control deck

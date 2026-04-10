@@ -249,6 +249,11 @@ export class JarvisWorldScene {
       startY: 0,
       moved: false
     };
+    this.gestureState = {
+      active: false,
+      lastScale: 1,
+      lastRotation: 0
+    };
     this.cameraDefaults = {
       azimuth: 0.48,
       elevation: 0.62,
@@ -279,6 +284,10 @@ export class JarvisWorldScene {
     this.handlePointerDown = this.handlePointerDown.bind(this);
     this.handlePointerMove = this.handlePointerMove.bind(this);
     this.handlePointerUp = this.handlePointerUp.bind(this);
+    this.handleWheel = this.handleWheel.bind(this);
+    this.handleGestureStart = this.handleGestureStart.bind(this);
+    this.handleGestureChange = this.handleGestureChange.bind(this);
+    this.handleGestureEnd = this.handleGestureEnd.bind(this);
     this.preventContextMenu = this.preventContextMenu.bind(this);
   }
 
@@ -1053,6 +1062,10 @@ export class JarvisWorldScene {
     dom.addEventListener("pointermove", this.handlePointerMove);
     dom.addEventListener("pointerup", this.handlePointerUp);
     dom.addEventListener("pointercancel", this.handlePointerUp);
+    dom.addEventListener("wheel", this.handleWheel, { passive: false, capture: true });
+    dom.addEventListener("gesturestart", this.handleGestureStart, { passive: false });
+    dom.addEventListener("gesturechange", this.handleGestureChange, { passive: false });
+    dom.addEventListener("gestureend", this.handleGestureEnd, { passive: false });
     dom.addEventListener("contextmenu", this.preventContextMenu);
     window.addEventListener("resize", this.handleResize);
   }
@@ -1094,6 +1107,136 @@ export class JarvisWorldScene {
     if (shouldPick) {
       this.pickAgentAt(event.clientX, event.clientY);
     }
+  }
+
+  getViewPlaneBasis() {
+    const right = this.scratch.vectorA.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    right.y = 0;
+    if (right.lengthSq() < 0.0001) {
+      right.set(1, 0, 0);
+    } else {
+      right.normalize();
+    }
+
+    const forward = this.scratch.vectorB.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    forward.y = 0;
+    if (forward.lengthSq() < 0.0001) {
+      forward.set(0, 0, -1);
+    } else {
+      forward.normalize();
+    }
+
+    return { right, forward };
+  }
+
+  moveCameraAndTarget(deltaRight, deltaForward) {
+    if (!this.controls) {
+      return;
+    }
+
+    const { right, forward } = this.getViewPlaneBasis();
+    const delta = this.scratch.vectorC.copy(right).multiplyScalar(deltaRight).addScaledVector(forward, deltaForward);
+    this.controls.target.add(delta);
+    this.camera.position.add(delta);
+    this.constrainControls();
+  }
+
+  dollyByScale(scaleFactor) {
+    if (!this.controls || !Number.isFinite(scaleFactor) || scaleFactor <= 0) {
+      return;
+    }
+
+    const offset = this.scratch.vectorC.copy(this.camera.position).sub(this.controls.target);
+    const currentDistance = offset.length();
+    if (currentDistance <= 0.0001) {
+      return;
+    }
+
+    const nextDistance = clamp(currentDistance * scaleFactor, this.controls.minDistance, this.controls.maxDistance);
+    offset.setLength(nextDistance);
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.camera.updateMatrixWorld();
+  }
+
+  rotateAroundTarget(deltaAzimuth) {
+    if (!this.controls || !Number.isFinite(deltaAzimuth) || deltaAzimuth === 0) {
+      return;
+    }
+
+    const offset = this.scratch.vectorC.copy(this.camera.position).sub(this.controls.target);
+    offset.applyAxisAngle(THREE.Object3D.DEFAULT_UP, deltaAzimuth);
+    this.camera.position.copy(this.controls.target).add(offset);
+    this.camera.lookAt(this.controls.target);
+    this.camera.updateMatrixWorld();
+  }
+
+  handleWheel(event) {
+    if (!this.controls) {
+      return;
+    }
+
+    const absX = Math.abs(event.deltaX);
+    const absY = Math.abs(event.deltaY);
+    const looksLikeTrackpad = event.ctrlKey || absX > 0 || absY < 20;
+
+    if (!looksLikeTrackpad) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (event.ctrlKey) {
+      const zoomFactor = Math.exp(event.deltaY * 0.0016);
+      this.dollyByScale(zoomFactor);
+      return;
+    }
+
+    if (event.shiftKey || event.altKey) {
+      const rotationDelta = (event.deltaX || event.deltaY) * 0.0035;
+      this.rotateAroundTarget(rotationDelta);
+      return;
+    }
+
+    const panScale = Math.max(0.012, this.camera.position.distanceTo(this.controls.target) * 0.00125);
+    this.moveCameraAndTarget(event.deltaX * panScale, event.deltaY * panScale);
+  }
+
+  handleGestureStart(event) {
+    this.gestureState.active = true;
+    this.gestureState.lastScale = Number(event.scale || 1);
+    this.gestureState.lastRotation = Number(event.rotation || 0);
+    event.preventDefault();
+  }
+
+  handleGestureChange(event) {
+    if (!this.controls) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const currentScale = Number(event.scale || 1);
+    const currentRotation = Number(event.rotation || 0);
+    const scaleRatio = currentScale / (this.gestureState.lastScale || 1);
+    const rotationDelta = THREE.MathUtils.degToRad(currentRotation - this.gestureState.lastRotation);
+
+    if (Number.isFinite(scaleRatio) && Math.abs(scaleRatio - 1) > 0.001) {
+      this.dollyByScale(1 / scaleRatio);
+    }
+    if (Number.isFinite(rotationDelta) && Math.abs(rotationDelta) > 0.0005) {
+      this.rotateAroundTarget(-rotationDelta * 0.9);
+    }
+
+    this.gestureState.lastScale = currentScale;
+    this.gestureState.lastRotation = currentRotation;
+  }
+
+  handleGestureEnd(event) {
+    this.gestureState.active = false;
+    this.gestureState.lastScale = 1;
+    this.gestureState.lastRotation = 0;
+    event.preventDefault();
   }
 
   pickAgentAt(clientX, clientY) {
