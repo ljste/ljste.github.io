@@ -1225,7 +1225,7 @@ export class JarvisWorldScene {
       this.dollyByScale(1 / scaleRatio);
     }
     if (Number.isFinite(rotationDelta) && Math.abs(rotationDelta) > 0.0005) {
-      this.rotateAroundTarget(-rotationDelta * 0.9);
+      this.rotateAroundTarget(rotationDelta * 0.9);
     }
 
     this.gestureState.lastScale = currentScale;
