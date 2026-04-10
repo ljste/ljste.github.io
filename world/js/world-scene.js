@@ -26,6 +26,11 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function normalizeAngleDeltaDegrees(value) {
+  const delta = ((Number(value || 0) + 540) % 360) - 180;
+  return delta;
+}
+
 function toColor(value, fallback = "#ffffff") {
   return new THREE.Color(typeof value === "string" ? value : fallback);
 }
@@ -1219,7 +1224,9 @@ export class JarvisWorldScene {
     const currentScale = Number(event.scale || 1);
     const currentRotation = Number(event.rotation || 0);
     const scaleRatio = currentScale / (this.gestureState.lastScale || 1);
-    const rotationDelta = THREE.MathUtils.degToRad(currentRotation - this.gestureState.lastRotation);
+    const rotationDelta = THREE.MathUtils.degToRad(
+      normalizeAngleDeltaDegrees(currentRotation - this.gestureState.lastRotation)
+    );
 
     if (Number.isFinite(scaleRatio) && Math.abs(scaleRatio - 1) > 0.001) {
       this.dollyByScale(1 / scaleRatio);
