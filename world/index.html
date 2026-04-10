@@ -6,109 +6,129 @@
     <title>Jarvis World</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260410b">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css?v=20260410c">
   </head>
   <body>
-    <main class="world-shell">
-      <aside class="sidebar">
-        <section class="panel panel-pad hero">
-          <span class="eyebrow">Public Tiny-Town Observatory</span>
-          <h1>Jarvis World</h1>
-          <p>Watch Jarvis and the crew move through a little pixel town. Guest mode stays private-friendly. Admin mode unlocks deeper detail and one dispatch lane into Jarvis.</p>
-          <div class="stat-row" id="mode-pills">
-            <span class="pill guest" id="guest-pill">Guest mode</span>
-            <span class="pill hidden" id="admin-pill">Admin mode</span>
+    <main class="app-shell">
+      <div id="world-stage" class="world-stage" aria-label="Jarvis World 3D scene"></div>
+
+      <header class="top-chrome">
+        <button class="brand-chip" id="mode-chip" type="button">
+          <span class="eyebrow">Jarvis World</span>
+          <strong id="mode-label">Access gate</strong>
+        </button>
+        <button class="icon-button" id="deck-toggle" type="button" aria-label="Open control deck">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </header>
+
+      <aside class="control-deck hidden" id="control-deck" aria-label="Control deck">
+        <div class="deck-header">
+          <div>
+            <span class="eyebrow">Control Deck</span>
+            <h2>Village telemetry</h2>
+          </div>
+          <button class="deck-close" id="deck-close" type="button" aria-label="Close control deck">×</button>
+        </div>
+
+        <section class="deck-section">
+          <h3>System</h3>
+          <p class="deck-copy" id="system-summary">Connecting to the bridge.</p>
+          <div class="status-pills">
+            <span class="status-pill" id="bridge-status-pill">Bridge unknown</span>
+            <span class="status-pill" id="activity-pill">No live activity yet</span>
           </div>
         </section>
 
-        <section class="panel panel-pad hidden" id="bridge-panel">
-          <div class="toolbar">
-            <div>
-              <h2>Bridge</h2>
-              <p class="meta-line">Advanced bridge settings for local development or recovery.</p>
-            </div>
+        <section class="deck-section">
+          <div class="section-row">
+            <h3>Agents</h3>
+            <small id="agent-count-label">0 tracked</small>
           </div>
-          <div class="form-stack">
-            <label>
-              Bridge URL
-              <input id="api-base-input" type="text" placeholder="http://127.0.0.1:4318">
-            </label>
-            <div class="control-row">
-              <button type="button" id="save-api-base">Save bridge URL</button>
-              <button type="button" class="secondary" id="refresh-state">Refresh now</button>
-            </div>
-            <p class="hint" id="bridge-status">Waiting for the bridge.</p>
-          </div>
+          <div class="stack-list compact" id="agent-cards"></div>
         </section>
 
-        <section class="panel panel-pad">
-          <h2>Agents</h2>
-          <p class="meta-line">Guest mode shows high-level activity only.</p>
-          <div class="cards" id="agent-cards"></div>
+        <section class="deck-section">
+          <div class="section-row">
+            <h3>Tasks</h3>
+            <small>Hidden from the home view</small>
+          </div>
+          <div class="stack-list" id="task-list"></div>
+        </section>
+
+        <section class="deck-section">
+          <div class="section-row">
+            <h3>Events</h3>
+            <small>Most recent village activity</small>
+          </div>
+          <div class="stack-list" id="event-list"></div>
+        </section>
+
+        <section class="deck-section hidden" id="deck-admin-row">
+          <button class="secondary-action" id="logout-button" type="button">Log out of admin mode</button>
         </section>
       </aside>
 
-      <section class="panel world-stage">
-        <div id="world-game"></div>
-        <div class="overlay-card">
-          <div class="hud">
-            <strong id="hud-title">Live town status</strong>
-            <div class="meta-line" id="hud-subtitle">Polling every 5 seconds.</div>
+      <section class="command-shell hidden" id="command-shell" aria-label="Jarvis command lane">
+        <div class="command-glass">
+          <div class="command-head">
+            <div>
+              <span class="eyebrow">Jarvis Lane</span>
+              <strong id="command-title">Guest mode</strong>
+            </div>
+            <small id="command-status">Observe-only</small>
           </div>
-          <div class="hud">
-            <strong>System</strong>
-            <div class="meta-line" id="system-line">Bridge offline.</div>
-          </div>
+
+          <p class="guest-copy" id="guest-command">
+            Guest mode lets you watch the village work in peace. Unlock admin mode to speak directly to Jarvis.
+          </p>
+
+          <form class="dispatch-form hidden" id="dispatch-form">
+            <input id="dispatch-input" type="text" placeholder="Tell Jarvis what to delegate next." autocomplete="off">
+            <button id="dispatch-button" type="submit">Send</button>
+          </form>
+
+          <div class="dispatch-result hidden" id="dispatch-result"></div>
         </div>
       </section>
 
-      <aside class="sidebar">
-        <section class="panel panel-pad">
-          <h2>Admin Gate</h2>
-          <p class="meta-line">Password unlocks richer detail and Jarvis dispatch. Guest mode never exposes private work.</p>
-          <form class="form-stack" id="login-form">
+      <section class="gate-overlay" id="gate-overlay" aria-label="Access gate">
+        <div class="gate-card">
+          <span class="eyebrow">Access Gate</span>
+          <h1>Enter Jarvis World</h1>
+          <p class="gate-copy">
+            Guest mode lets you wander the village and watch the agent gnomes work. Admin mode unlocks the Jarvis command lane and richer internal detail.
+          </p>
+
+          <div class="gate-actions">
+            <button id="guest-enter" type="button">Continue as guest</button>
+          </div>
+
+          <form class="gate-form" id="login-form">
             <label>
-              Password
-              <input id="password-input" type="password" autocomplete="current-password" placeholder="Enter admin password">
+              Admin password
+              <input id="password-input" type="password" autocomplete="current-password" placeholder="Enter your admin password">
             </label>
-            <div class="auth-row">
-              <button type="submit" id="login-button">Unlock admin mode</button>
-              <button type="button" class="secondary hidden" id="logout-button">Log out</button>
-            </div>
+            <button id="login-button" type="submit">Unlock admin world</button>
           </form>
-          <p class="hint" id="auth-status">Guest mode active.</p>
-        </section>
 
-        <section class="panel panel-pad">
-          <h2>Tasks</h2>
-          <p class="meta-line">Quest-board activity from cron and delegation runs.</p>
-          <div class="task-list" id="task-list"></div>
-        </section>
-
-        <section class="panel panel-pad">
-          <h2>Events</h2>
-          <p class="meta-line">Recent town activity.</p>
-          <div class="event-list" id="event-list"></div>
-        </section>
-
-        <section class="panel panel-pad hidden" id="dispatch-panel">
-          <h2>Dispatch Jarvis</h2>
-          <p class="meta-line">Admin can send one freeform instruction to Jarvis. Subagents still route through him.</p>
-          <form class="form-stack" id="dispatch-form">
-            <label>
-              Instruction
-              <textarea id="dispatch-input" placeholder="Example: Ask coder to inspect the latest plugin error and report back."></textarea>
-            </label>
-            <button type="submit" id="dispatch-button">Send to Jarvis</button>
-          </form>
-          <div class="message-box hidden" id="dispatch-result"></div>
-        </section>
-      </aside>
+          <p class="gate-status" id="gate-status">Checking for a saved admin session...</p>
+        </div>
+      </section>
     </main>
 
-    <script src="./config.js?v=20260410b"></script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
-    <script type="module" src="./js/app.js?v=20260410b"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/"
+        }
+      }
+    </script>
+    <script src="./config.js?v=20260410c"></script>
+    <script type="module" src="./js/app.js?v=20260410c"></script>
   </body>
 </html>

@@ -11,10 +11,6 @@ function formatTime(timestamp) {
   });
 }
 
-function statusLabel(status) {
-  return status ? status[0].toUpperCase() + status.slice(1) : "Unknown";
-}
-
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -24,42 +20,49 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function stationLabel(manifest, stationId) {
-  return manifest?.stations?.[stationId]?.label || String(stationId || "Unknown").replaceAll("-", " ");
+function statusLabel(status) {
+  return status ? status[0].toUpperCase() + status.slice(1) : "Unknown";
 }
 
-function kindLabel(kind) {
-  if (!kind) {
-    return "Task";
-  }
-  return kind[0].toUpperCase() + kind.slice(1);
-}
-
-function initialMark(value) {
-  return String(value || "?").trim().slice(0, 1).toUpperCase() || "?";
+function cardMarkup(title, body, meta = "", badge = "") {
+  return `
+    <article class="list-card">
+      <div class="card-topline">
+        <h4>${escapeHtml(title)}</h4>
+        ${badge ? `<span class="badge">${escapeHtml(badge)}</span>` : ""}
+      </div>
+      ${body ? `<p>${escapeHtml(body)}</p>` : ""}
+      ${meta ? `<small>${escapeHtml(meta)}</small>` : ""}
+    </article>
+  `;
 }
 
 export function bindUiElements() {
   return {
-    guestPill: document.getElementById("guest-pill"),
-    adminPill: document.getElementById("admin-pill"),
-    bridgePanel: document.getElementById("bridge-panel"),
-    agentCards: document.getElementById("agent-cards"),
-    taskList: document.getElementById("task-list"),
-    eventList: document.getElementById("event-list"),
-    bridgeStatus: document.getElementById("bridge-status"),
-    authStatus: document.getElementById("auth-status"),
-    systemLine: document.getElementById("system-line"),
-    hudTitle: document.getElementById("hud-title"),
-    hudSubtitle: document.getElementById("hud-subtitle"),
-    apiBaseInput: document.getElementById("api-base-input"),
-    saveApiBaseButton: document.getElementById("save-api-base"),
-    refreshButton: document.getElementById("refresh-state"),
+    gateOverlay: document.getElementById("gate-overlay"),
+    gateStatus: document.getElementById("gate-status"),
+    guestEnterButton: document.getElementById("guest-enter"),
     loginForm: document.getElementById("login-form"),
     passwordInput: document.getElementById("password-input"),
     loginButton: document.getElementById("login-button"),
+    modeChip: document.getElementById("mode-chip"),
+    modeLabel: document.getElementById("mode-label"),
+    deckToggle: document.getElementById("deck-toggle"),
+    deckClose: document.getElementById("deck-close"),
+    controlDeck: document.getElementById("control-deck"),
+    bridgeStatusPill: document.getElementById("bridge-status-pill"),
+    activityPill: document.getElementById("activity-pill"),
+    systemSummary: document.getElementById("system-summary"),
+    agentCountLabel: document.getElementById("agent-count-label"),
+    agentCards: document.getElementById("agent-cards"),
+    taskList: document.getElementById("task-list"),
+    eventList: document.getElementById("event-list"),
+    deckAdminRow: document.getElementById("deck-admin-row"),
     logoutButton: document.getElementById("logout-button"),
-    dispatchPanel: document.getElementById("dispatch-panel"),
+    commandShell: document.getElementById("command-shell"),
+    commandTitle: document.getElementById("command-title"),
+    commandStatus: document.getElementById("command-status"),
+    guestCommand: document.getElementById("guest-command"),
     dispatchForm: document.getElementById("dispatch-form"),
     dispatchInput: document.getElementById("dispatch-input"),
     dispatchButton: document.getElementById("dispatch-button"),
@@ -67,98 +70,87 @@ export function bindUiElements() {
   };
 }
 
-export function renderMode(ui, isAdmin) {
-  ui.guestPill.classList.toggle("hidden", isAdmin);
-  ui.adminPill.classList.toggle("hidden", !isAdmin);
-  ui.logoutButton.classList.toggle("hidden", !isAdmin);
-  ui.dispatchPanel.classList.toggle("hidden", !isAdmin);
-  ui.authStatus.textContent = isAdmin ? "Admin mode unlocked." : "Guest mode active.";
+export function setGateVisible(ui, visible, message = "") {
+  ui.gateOverlay.classList.toggle("hidden", !visible);
+  if (message) {
+    ui.gateStatus.textContent = message;
+  }
 }
 
-export function renderBridgePanel(ui, isVisible) {
-  ui.bridgePanel.classList.toggle("hidden", !isVisible);
+export function setGateMessage(ui, message) {
+  ui.gateStatus.textContent = message;
 }
 
-export function renderBridgeStatus(ui, message, isHealthy) {
-  ui.bridgeStatus.textContent = message;
-  ui.systemLine.textContent = isHealthy ? message : `Offline fallback. ${message}`;
+export function setDeckOpen(ui, isOpen) {
+  ui.controlDeck.classList.toggle("hidden", !isOpen);
 }
 
-export function renderState(ui, state, isAdmin, manifest) {
-  ui.hudTitle.textContent = isAdmin ? "Admin observatory" : "Guest observatory";
-  ui.hudSubtitle.textContent = `Updated ${formatTime(state.generatedAt)} - ${state.system.activeAgents} agents in motion`;
-  ui.systemLine.textContent = state.system.healthy
-    ? `Gateway ${state.system.gatewayStatus}. ${state.system.agentCount} agents and ${state.system.taskCount} live task tracks.`
-    : "Bridge or gateway offline. The town is showing the safest available state.";
-
-  ui.agentCards.innerHTML = "";
-  for (const agent of state.agents) {
-    const card = document.createElement("article");
-    card.className = `card agent-card status-${escapeHtml(agent.status)}`;
-    const actionLabel = isAdmin ? agent.currentAction.adminLabel : agent.currentAction.publicLabel;
-    card.innerHTML = `
-      <div class="card-header">
-        <div class="identity-row">
-          <span class="agent-mark">${escapeHtml(initialMark(agent.name))}</span>
-          <div>
-            <h3>${escapeHtml(agent.name)}</h3>
-            <small class="role-line">${escapeHtml(agent.role)}</small>
-          </div>
-        </div>
-        <div class="status-badge">
-          <span class="status-dot status-${escapeHtml(agent.status)}"></span>
-          <span>${escapeHtml(statusLabel(agent.status))}</span>
-        </div>
-      </div>
-      <p class="agent-action">${escapeHtml(actionLabel || "Standing by")}</p>
-      <div class="meta-row">
-        <span class="station-chip">${escapeHtml(stationLabel(manifest, agent.stationId))}</span>
-        <small>Updated ${escapeHtml(formatTime(agent.lastUpdatedAt))}</small>
-      </div>
-    `;
-    ui.agentCards.appendChild(card);
+export function renderMode(ui, mode, hasEntered) {
+  if (mode === "admin") {
+    ui.modeLabel.textContent = "Admin world";
+    ui.commandTitle.textContent = "Jarvis command lane";
+    ui.commandStatus.textContent = "Admin dispatch ready";
+    ui.guestCommand.classList.add("hidden");
+    ui.dispatchForm.classList.remove("hidden");
+    ui.deckAdminRow.classList.remove("hidden");
+  } else {
+    ui.modeLabel.textContent = hasEntered ? "Guest world" : "Access gate";
+    ui.commandTitle.textContent = hasEntered ? "Guest observatory" : "Access gate";
+    ui.commandStatus.textContent = hasEntered ? "Observe-only" : "Choose a lane";
+    ui.guestCommand.classList.remove("hidden");
+    ui.dispatchForm.classList.add("hidden");
+    ui.deckAdminRow.classList.add("hidden");
   }
 
-  ui.taskList.innerHTML = "";
-  for (const task of state.tasks || []) {
-    const item = document.createElement("article");
-    item.className = "task-item";
-    const label = isAdmin ? task.adminLabel : task.publicLabel;
-    const timing = task.nextRunAt ? `Next ${formatTime(task.nextRunAt)}` : `Updated ${formatTime(task.updatedAt)}`;
-    const owner = stationLabel(manifest, state.agents?.find((agent) => agent.id === task.ownerAgentId)?.stationId);
-    item.innerHTML = `
-      <div class="task-header">
-        <span class="task-kind">${escapeHtml(kindLabel(task.kind))}</span>
-        <small>${escapeHtml(statusLabel(task.status))}</small>
-      </div>
-      <strong>${escapeHtml(label || "Scheduled work")}</strong>
-      <p class="task-subtext">Owner ${escapeHtml(task.ownerAgentId)}${task.targetAgentId ? ` -> ${escapeHtml(task.targetAgentId)}` : ""}</p>
-      <div class="meta-row">
-        <span class="station-chip">${escapeHtml(owner)}</span>
-        <small>${escapeHtml(timing)}</small>
-      </div>
-    `;
-    ui.taskList.appendChild(item);
-  }
+  ui.commandShell.classList.toggle("hidden", !hasEntered);
+}
 
-  ui.eventList.innerHTML = "";
-  for (const event of state.events || []) {
-    const item = document.createElement("article");
-    item.className = "event-item";
-    const message = isAdmin ? event.adminText : event.publicText;
-    item.innerHTML = `
-      <div class="event-stripe"></div>
-      <div class="event-copy">
-        <strong>${escapeHtml(message)}</strong>
-        <small class="event-time">${escapeHtml(formatTime(event.timestamp))}</small>
-      </div>
-    `;
-    ui.eventList.appendChild(item);
-  }
+export function renderBridgeStatus(ui, message, isHealthy, state) {
+  ui.bridgeStatusPill.textContent = isHealthy ? "Bridge live" : "Bridge offline";
+  ui.activityPill.textContent = state
+    ? `${state.system.activeAgents} active • ${state.system.taskCount} tracked`
+    : "No live activity yet";
+  ui.systemSummary.textContent = message;
+}
+
+export function renderState(ui, state, isAdmin) {
+  ui.agentCountLabel.textContent = `${state.agents.length} tracked`;
+
+  ui.agentCards.innerHTML = (state.agents || [])
+    .map((agent) => {
+      const label = isAdmin ? agent.currentAction.adminLabel : agent.currentAction.publicLabel;
+      return cardMarkup(
+        `${agent.name} • ${statusLabel(agent.status)}`,
+        label || agent.role,
+        `Updated ${formatTime(agent.lastUpdatedAt)}`,
+        agent.role
+      );
+    })
+    .join("");
+
+  ui.taskList.innerHTML = (state.tasks || [])
+    .map((task) => {
+      const label = isAdmin ? task.adminLabel : task.publicLabel;
+      const timing = task.nextRunAt ? `Next ${formatTime(task.nextRunAt)}` : `Updated ${formatTime(task.updatedAt)}`;
+      return cardMarkup(
+        label || "Scheduled work",
+        `Owner ${task.ownerAgentId}${task.targetAgentId ? ` → ${task.targetAgentId}` : ""}`,
+        timing,
+        task.kind || "task"
+      );
+    })
+    .join("");
+
+  ui.eventList.innerHTML = (state.events || [])
+    .map((event) => {
+      const text = isAdmin ? event.adminText : event.publicText;
+      return cardMarkup(text || "Village activity", "", formatTime(event.timestamp));
+    })
+    .join("");
 }
 
 export function showDispatchResult(ui, text, isError = false) {
   ui.dispatchResult.classList.remove("hidden");
   ui.dispatchResult.textContent = text;
-  ui.dispatchResult.style.borderColor = isError ? "rgba(173, 72, 42, 0.45)" : "rgba(26, 108, 116, 0.26)";
+  ui.dispatchResult.style.borderColor = isError ? "rgba(255, 154, 143, 0.38)" : "rgba(118, 240, 255, 0.3)";
 }

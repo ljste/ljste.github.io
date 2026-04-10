@@ -1,494 +1,768 @@
-function toColor(hex) {
-  return Phaser.Display.Color.HexStringToColor(hex).color;
-}
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-function shiftColor(hex, amount = 24) {
-  const value = Number.parseInt(String(hex || "#000000").replace("#", ""), 16);
-  const red = Phaser.Math.Clamp(((value >> 16) & 255) + amount, 0, 255);
-  const green = Phaser.Math.Clamp(((value >> 8) & 255) + amount, 0, 255);
-  const blue = Phaser.Math.Clamp((value & 255) + amount, 0, 255);
-  return `#${((red << 16) | (green << 8) | blue).toString(16).padStart(6, "0")}`;
-}
+const HOUSE_ASSET_BASE = "../assets/models/kenney-town";
+const HOUSE_ASSETS = [
+  "wall-wood-door.glb",
+  "wall-wood-window-small.glb",
+  "wall-wood.glb",
+  "roof-high.glb",
+  "roof-high-window.glb",
+  "chimney.glb",
+  "lantern.glb"
+];
 
-function truncateLabel(value, maxLength = 36) {
-  const text = String(value || "").trim();
-  if (text.length <= maxLength) {
-    return text;
+function hashString(value) {
+  let hash = 2166136261;
+  for (const char of String(value || "")) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
   }
-  if (maxLength <= 3) {
-    return text.slice(0, maxLength);
+  return hash >>> 0;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function makePalette(agent, manifestEntry) {
+  if (Array.isArray(manifestEntry?.palette) && manifestEntry.palette.length >= 2) {
+    return {
+      hat: manifestEntry.palette[1],
+      coat: manifestEntry.palette[0],
+      beard: "#f4e9d7"
+    };
   }
-  return `${text.slice(0, maxLength - 3).trimEnd()}...`;
-}
 
-function diamondPoints(x, y, width, height) {
-  return [
-    { x, y: y - height / 2 },
-    { x: x + width / 2, y },
-    { x, y: y + height / 2 },
-    { x: x - width / 2, y }
-  ];
-}
-
-function drawPolygon(graphics, points, fill, alpha = 1, stroke = null, strokeAlpha = 0.22, strokeWidth = 2) {
-  graphics.fillStyle(toColor(fill), alpha);
-  graphics.beginPath();
-  graphics.moveTo(points[0].x, points[0].y);
-  for (let index = 1; index < points.length; index += 1) {
-    graphics.lineTo(points[index].x, points[index].y);
-  }
-  graphics.closePath();
-  graphics.fillPath();
-
-  if (stroke) {
-    graphics.lineStyle(strokeWidth, toColor(stroke), strokeAlpha);
-    graphics.beginPath();
-    graphics.moveTo(points[0].x, points[0].y);
-    for (let index = 1; index < points.length; index += 1) {
-      graphics.lineTo(points[index].x, points[index].y);
-    }
-    graphics.closePath();
-    graphics.strokePath();
-  }
-}
-
-function drawDiamond(graphics, x, y, width, height, fill, alpha = 1, stroke = null) {
-  drawPolygon(graphics, diamondPoints(x, y, width, height), fill, alpha, stroke || shiftColor(fill, -40));
-}
-
-function drawPrism(graphics, x, y, width, height, depth, topFill, leftFill, rightFill, stroke = "#1e2632") {
-  const top = diamondPoints(x, y, width, height);
-  const bottom = top.map((point) => ({ x: point.x, y: point.y + depth }));
-
-  drawPolygon(graphics, [top[3], top[2], bottom[2], bottom[3]], leftFill, 1, stroke);
-  drawPolygon(graphics, [top[1], top[2], bottom[2], bottom[1]], rightFill, 1, stroke);
-  drawPolygon(graphics, top, topFill, 1, stroke, 0.3);
-}
-
-function drawRoadTile(graphics, x, y, width = 28, height = 14) {
-  drawDiamond(graphics, x, y, width, height, "#c7a87a", 0.95, "#8e6847");
-  drawDiamond(graphics, x, y, width - 8, height - 5, "#d9c19a", 0.85, "#af8c62");
-}
-
-function drawRoad(graphics, start, end) {
-  const distance = Phaser.Math.Distance.Between(start.x, start.y, end.x, end.y);
-  const steps = Math.max(2, Math.ceil(distance / 28));
-  for (let index = 0; index <= steps; index += 1) {
-    const progress = index / steps;
-    const eased = Phaser.Math.Easing.Sine.InOut(progress);
-    const x = Phaser.Math.Linear(start.x, end.x, eased);
-    const y = Phaser.Math.Linear(start.y, end.y, eased);
-    drawRoadTile(graphics, x, y);
-  }
-}
-
-function drawMountain(graphics, points, fill) {
-  drawPolygon(graphics, points, fill, 0.85, shiftColor(fill, -35), 0.18, 1);
-}
-
-function stationPalette(kind) {
-  const table = {
-    hall: {
-      roof: "#9dc4ff",
-      left: "#3e5a96",
-      right: "#2f4578",
-      base: "#4668a6",
-      accent: "#f4d48d"
-    },
-    workshop: {
-      roof: "#ffc47f",
-      left: "#b3662a",
-      right: "#8e4d22",
-      base: "#cf7a38",
-      accent: "#ffe4ba"
-    },
-    library: {
-      roof: "#8be0c0",
-      left: "#2a7e66",
-      right: "#225f53",
-      base: "#2f9070",
-      accent: "#dffded"
-    },
-    archive: {
-      roof: "#f3a8c6",
-      left: "#8d4477",
-      right: "#6f335d",
-      base: "#b45791",
-      accent: "#ffe0f0"
-    },
-    tower: {
-      roof: "#b9a7ff",
-      left: "#5f45b5",
-      right: "#4d3895",
-      base: "#7054d9",
-      accent: "#efe7ff"
-    },
-    garden: {
-      roof: "#b7e98a",
-      left: "#5a8c31",
-      right: "#476f28",
-      base: "#71a83a",
-      accent: "#edfcd9"
-    },
-    board: {
-      roof: "#edc28f",
-      left: "#8d6138",
-      right: "#734f31",
-      base: "#ab7547",
-      accent: "#fff0d8"
-    },
-    guesthouse: {
-      roof: "#c7d5df",
-      left: "#5f7689",
-      right: "#4a6072",
-      base: "#6e8799",
-      accent: "#eef6fc"
-    }
+  const seed = hashString(agent.id);
+  const hues = [0.02, 0.08, 0.14, 0.33, 0.56, 0.72];
+  const hue = hues[seed % hues.length];
+  return {
+    hat: new THREE.Color().setHSL(hue, 0.72, 0.46),
+    coat: new THREE.Color().setHSL((hue + 0.08) % 1, 0.54, 0.76),
+    beard: new THREE.Color("#f7edd6")
   };
-
-  return table[kind] || table.guesthouse;
 }
 
-export class JarvisWorldScene extends Phaser.Scene {
-  constructor() {
-    super("JarvisWorldScene");
+function toColor(value, fallback = "#ffffff") {
+  return new THREE.Color(typeof value === "string" ? value : fallback);
+}
+
+function normalizePrototype(object3d) {
+  const root = object3d.clone(true);
+  root.updateMatrixWorld(true);
+
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+
+  root.position.x -= center.x;
+  root.position.y -= box.min.y;
+  root.position.z -= center.z;
+  root.scale.multiplyScalar(1 / maxDim);
+  root.userData.normalizedSize = size.divideScalar(maxDim);
+
+  root.traverse((child) => {
+    if (!child.isMesh) {
+      return;
+    }
+
+    child.castShadow = false;
+    child.receiveShadow = false;
+    child.frustumCulled = true;
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) {
+      if (!material) {
+        continue;
+      }
+      material.flatShading = true;
+      if ("metalness" in material) {
+        material.metalness = 0;
+      }
+      if ("roughness" in material) {
+        material.roughness = 1;
+      }
+      material.needsUpdate = true;
+    }
+  });
+
+  return root;
+}
+
+function createRoundedPad(color, radius = 2.3) {
+  const geometry = new THREE.CylinderGeometry(radius, radius * 1.08, 0.42, 8);
+  const material = new THREE.MeshStandardMaterial({
+    color: toColor(color),
+    roughness: 1,
+    metalness: 0,
+    flatShading: true
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.y = 0.2;
+  return mesh;
+}
+
+function ellipsePoint(radiusX, radiusZ, angle) {
+  return new THREE.Vector3(Math.cos(angle) * radiusX, 0, Math.sin(angle) * radiusZ);
+}
+
+function buildLots(agentIds) {
+  const lots = new Map();
+  const others = agentIds.filter((id) => id !== "main").sort((left, right) => left.localeCompare(right));
+  const centerLot = {
+    house: new THREE.Vector3(0, 0, 2),
+    idle: new THREE.Vector3(0, 0, 5.4),
+    work: new THREE.Vector3(0, 0, 3.2),
+    quest: new THREE.Vector3(0, 0, 1.4),
+    heading: Math.PI
+  };
+  lots.set("main", centerLot);
+
+  const ringPattern = [5, 7, 10, 14];
+  let cursor = 0;
+
+  for (let ringIndex = 0; cursor < others.length; ringIndex += 1) {
+    const ringCount = ringPattern[ringIndex] || (ringPattern.at(-1) + ringIndex * 4);
+    const radiusX = 10 + ringIndex * 5.4;
+    const radiusZ = 7.8 + ringIndex * 4.4;
+    const offset = ringIndex % 2 === 0 ? -Math.PI / 2 : -Math.PI / 2 + Math.PI / ringCount;
+
+    for (let slotIndex = 0; slotIndex < ringCount && cursor < others.length; slotIndex += 1, cursor += 1) {
+      const agentId = others[cursor];
+      const angle = offset + (slotIndex / ringCount) * Math.PI * 2;
+      const home = ellipsePoint(radiusX, radiusZ, angle);
+      const inward = new THREE.Vector3().sub(home).normalize();
+      const tangent = new THREE.Vector3(-inward.z, 0, inward.x);
+      lots.set(agentId, {
+        house: home,
+        idle: home.clone().addScaledVector(inward, 2.6),
+        work: home.clone().addScaledVector(inward, 1.25).addScaledVector(tangent, 0.35),
+        quest: home.clone().lerp(new THREE.Vector3(0, 0, 0), 0.5),
+        heading: Math.atan2(-inward.x, -inward.z)
+      });
+    }
+  }
+
+  return lots;
+}
+
+function makeMaterial(color) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: 1,
+    metalness: 0,
+    flatShading: true
+  });
+}
+
+export class JarvisWorldScene {
+  constructor(container) {
+    this.container = container;
     this.manifest = null;
-    this.currentState = null;
-    this.agentSprites = new Map();
-    this.agentLabels = new Map();
-    this.agentShadows = new Map();
-    this.stationNodes = new Map();
+    this.state = null;
+    this.isAdmin = false;
+    this.renderer = null;
+    this.scene = null;
+    this.camera = null;
+    this.clock = new THREE.Clock();
+    this.assetLoader = new GLTFLoader();
+    this.assetLibrary = new Map();
+    this.assetFailures = false;
+    this.agentActors = new Map();
+    this.homeGroups = new Map();
+    this.taskOrbs = [];
+    this.lotMap = new Map();
+    this.pointer = new THREE.Vector2();
+    this.baseCameraPosition = new THREE.Vector3(0, 19, 28);
+    this.raf = 0;
+    this.handleResize = this.handleResize.bind(this);
+    this.handlePointerMove = this.handlePointerMove.bind(this);
   }
 
-  setManifest(manifest) {
+  async init(manifest) {
     this.manifest = manifest;
-  }
 
-  create() {
-    this.cameras.main.setBackgroundColor("#d8eef5");
-    this.drawStaticWorld();
-  }
-
-  createAgentTexture(spriteKey, primary, secondary) {
-    const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-
-    drawDiamond(graphics, 14, 24, 18, 8, "#2d3441", 0.95, "#1b2028");
-    graphics.fillStyle(toColor(primary), 1);
-    graphics.fillEllipse(14, 13, 12, 13);
-    graphics.fillStyle(toColor(secondary), 1);
-    graphics.fillEllipse(14, 17, 16, 11);
-    graphics.fillStyle(toColor("#fff6ea"), 0.95);
-    graphics.fillEllipse(14, 8, 9, 9);
-    graphics.fillStyle(toColor("#18202a"), 1);
-    graphics.fillCircle(11.5, 8, 1.1);
-    graphics.fillCircle(16.5, 8, 1.1);
-    graphics.fillRect(11, 11, 6, 1);
-    graphics.fillStyle(toColor(shiftColor(primary, 38)), 0.75);
-    graphics.fillEllipse(11.5, 6.5, 3.5, 2.5);
-    graphics.generateTexture(spriteKey, 28, 30);
-    graphics.destroy();
-  }
-
-  drawBackdrop(width, height) {
-    const sky = this.add.graphics();
-    sky.fillGradientStyle(0xf9c886, 0xf6d9a5, 0x9cc9db, 0x6e96ad, 1);
-    sky.fillRect(0, 0, width, height);
-
-    const glow = this.add.graphics();
-    glow.fillStyle(0xffefcb, 0.9);
-    glow.fillCircle(width - 170, 110, 64);
-    glow.fillStyle(0xffffff, 0.25);
-    glow.fillCircle(width - 150, 96, 44);
-
-    const haze = this.add.graphics();
-    drawMountain(haze, [
-      { x: -60, y: 300 },
-      { x: 100, y: 180 },
-      { x: 220, y: 300 }
-    ], "#b9ced6");
-    drawMountain(haze, [
-      { x: 120, y: 300 },
-      { x: 320, y: 150 },
-      { x: 500, y: 300 }
-    ], "#9bb7c5");
-    drawMountain(haze, [
-      { x: 440, y: 300 },
-      { x: 690, y: 138 },
-      { x: 900, y: 300 }
-    ], "#88a8b8");
-    drawMountain(haze, [
-      { x: 760, y: 300 },
-      { x: 1020, y: 166 },
-      { x: width + 80, y: 300 }
-    ], "#7b9eb0");
-
-    const cloud = this.add.graphics();
-    cloud.fillStyle(0xffffff, 0.55);
-    cloud.fillEllipse(182, 118, 110, 30);
-    cloud.fillEllipse(235, 110, 84, 28);
-    cloud.fillEllipse(280, 120, 100, 32);
-    cloud.fillEllipse(810, 86, 94, 28);
-    cloud.fillEllipse(858, 78, 70, 24);
-    cloud.fillEllipse(904, 88, 88, 26);
-  }
-
-  drawIsland(width, height) {
-    const island = this.add.graphics();
-    const centerX = width / 2;
-    const centerY = height / 2 + 36;
-
-    drawPrism(island, centerX, centerY, 820, 360, 120, "#89c873", "#4f8d4d", "#3f7541", "#305034");
-    drawDiamond(island, centerX, centerY - 28, 720, 292, "#9bda82", 1, "#5e9956");
-    drawDiamond(island, centerX, centerY + 14, 604, 214, "#b4df8f", 0.75, "#73a25d");
-
-    const innerRing = this.add.graphics();
-    drawDiamond(innerRing, centerX, centerY - 6, 650, 244, "#d5bc8b", 0.18, "#9a7f51");
-    drawDiamond(innerRing, centerX, centerY + 6, 560, 194, "#f6efe0", 0.18, "#b7a07b");
-
-    const pond = this.add.graphics();
-    drawDiamond(pond, centerX + 220, centerY + 34, 170, 74, "#71c0d7", 0.7, "#41879a");
-    drawDiamond(pond, centerX + 222, centerY + 28, 140, 54, "#b6eefb", 0.5, "#4f96a8");
-  }
-
-  drawRoads() {
-    const road = this.add.graphics();
-    const quest = this.getStationPosition("quest-board");
-    const hall = this.getStationPosition("dispatch-hall");
-    const coder = this.getStationPosition("coder-forge");
-    const researcher = this.getStationPosition("researcher-library");
-    const curator = this.getStationPosition("curator-archive");
-    const slacker = this.getStationPosition("slacker-tower");
-    const philosopher = this.getStationPosition("philosopher-garden");
-
-    drawRoad(road, { x: hall.x, y: hall.y - 76 }, { x: quest.x, y: quest.y + 12 });
-    drawRoad(road, { x: hall.x - 64, y: hall.y - 8 }, { x: coder.x + 62, y: coder.y + 10 });
-    drawRoad(road, { x: hall.x + 72, y: hall.y - 10 }, { x: researcher.x - 64, y: researcher.y + 8 });
-    drawRoad(road, { x: hall.x - 88, y: hall.y + 74 }, { x: curator.x + 66, y: curator.y - 4 });
-    drawRoad(road, { x: hall.x + 94, y: hall.y + 74 }, { x: slacker.x - 66, y: slacker.y - 4 });
-    drawRoad(road, { x: hall.x, y: hall.y + 88 }, { x: philosopher.x, y: philosopher.y - 34 });
-  }
-
-  drawStation(stationId, station) {
-    const layer = this.add.graphics();
-    const palette = stationPalette(station.kind);
-    const baseY = station.y + 18;
-
-    drawDiamond(layer, station.x, baseY + 40, station.width + 36, 36, "#000000", 0.08, "#000000");
-    drawDiamond(layer, station.x, baseY + 16, station.width + 8, 32, "#f3dfb1", 0.95, "#b48f5b");
-    drawDiamond(layer, station.x, baseY + 10, station.width - 10, 24, "#fff8e7", 0.82, "#c5a473");
-
-    if (station.kind === "board") {
-      drawPrism(layer, station.x, station.y + 2, 72, 34, 38, "#f7deb7", "#815735", "#6f482d");
-      layer.fillStyle(toColor("#6d4627"), 1);
-      layer.fillRect(station.x - 34, station.y - 18, 8, 58);
-      layer.fillRect(station.x + 26, station.y - 18, 8, 58);
-      layer.fillStyle(toColor("#fff5d8"), 1);
-      layer.fillRoundedRect(station.x - 38, station.y - 54, 76, 46, 10);
-      layer.lineStyle(3, toColor("#ab7a43"), 1);
-      layer.strokeRoundedRect(station.x - 38, station.y - 54, 76, 46, 10);
-      layer.fillStyle(toColor("#e2af6e"), 1);
-      layer.fillRect(station.x - 28, station.y - 42, 56, 8);
-      layer.fillRect(station.x - 28, station.y - 26, 42, 6);
-    } else if (station.kind === "hall") {
-      drawPrism(layer, station.x, station.y - 8, 178, 92, 72, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x, station.y - 52, 118, 56, 34, shiftColor(palette.roof, 18), shiftColor(palette.left, 8), shiftColor(palette.right, 8));
-      layer.fillStyle(toColor(palette.accent), 0.95);
-      layer.fillEllipse(station.x, station.y + 22, 32, 48);
-      layer.fillStyle(toColor("#35548c"), 1);
-      layer.fillEllipse(station.x, station.y + 18, 18, 32);
-      layer.fillStyle(toColor("#fef7e2"), 0.9);
-      layer.fillCircle(station.x, station.y - 78, 12);
-      layer.fillStyle(toColor("#f0c468"), 0.7);
-      layer.fillCircle(station.x, station.y - 78, 18);
-    } else if (station.kind === "workshop") {
-      drawPrism(layer, station.x, station.y - 2, 144, 78, 58, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x - 34, station.y - 34, 66, 34, 28, shiftColor(palette.roof, 10), shiftColor(palette.left, 12), shiftColor(palette.right, 12));
-      layer.fillStyle(toColor("#4f3a2b"), 1);
-      layer.fillRect(station.x + 42, station.y - 80, 20, 54);
-      layer.fillStyle(toColor("#ffd08a"), 0.85);
-      layer.fillRect(station.x - 12, station.y + 8, 24, 18);
-      layer.fillStyle(toColor("#fff3cd"), 0.75);
-      layer.fillRect(station.x - 8, station.y + 12, 16, 10);
-    } else if (station.kind === "library") {
-      drawPrism(layer, station.x, station.y - 4, 152, 84, 64, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x, station.y - 46, 92, 44, 26, shiftColor(palette.roof, 14), shiftColor(palette.left, 10), shiftColor(palette.right, 10));
-      layer.fillStyle(toColor("#f5fff9"), 0.92);
-      layer.fillEllipse(station.x, station.y - 64, 44, 26);
-      layer.fillStyle(toColor("#cfeee3"), 0.88);
-      layer.fillEllipse(station.x, station.y - 70, 28, 18);
-      layer.fillStyle(toColor(palette.accent), 0.95);
-      layer.fillRect(station.x - 10, station.y + 4, 20, 24);
-    } else if (station.kind === "archive") {
-      drawPrism(layer, station.x, station.y - 2, 142, 74, 56, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x + 18, station.y - 40, 70, 36, 22, shiftColor(palette.roof, 12), shiftColor(palette.left, 10), shiftColor(palette.right, 10));
-      layer.fillStyle(toColor(palette.accent), 0.95);
-      layer.fillRect(station.x - 34, station.y - 2, 18, 28);
-      layer.fillRect(station.x - 10, station.y - 8, 18, 34);
-      layer.fillRect(station.x + 14, station.y + 2, 18, 24);
-    } else if (station.kind === "tower") {
-      drawPrism(layer, station.x, station.y - 8, 106, 54, 104, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x, station.y - 86, 60, 28, 24, shiftColor(palette.roof, 16), shiftColor(palette.left, 8), shiftColor(palette.right, 8));
-      layer.fillStyle(toColor("#fff4d3"), 0.95);
-      layer.fillCircle(station.x, station.y - 122, 10);
-      layer.fillStyle(toColor("#f0d9ff"), 0.55);
-      layer.fillCircle(station.x, station.y - 122, 18);
-    } else if (station.kind === "garden") {
-      drawPrism(layer, station.x, station.y + 6, 126, 56, 28, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x, station.y - 28, 86, 36, 24, shiftColor(palette.roof, 18), shiftColor(palette.left, 8), shiftColor(palette.right, 8));
-      layer.fillStyle(toColor("#f7f1d7"), 0.95);
-      layer.fillEllipse(station.x, station.y - 40, 26, 28);
-      layer.fillStyle(toColor("#74b84d"), 0.95);
-      layer.fillCircle(station.x - 48, station.y - 18, 15);
-      layer.fillCircle(station.x + 48, station.y - 16, 15);
-      layer.fillStyle(toColor("#8dc15c"), 0.95);
-      layer.fillCircle(station.x - 42, station.y - 26, 12);
-      layer.fillCircle(station.x + 54, station.y - 26, 12);
-    } else {
-      drawPrism(layer, station.x, station.y, 112, 62, 46, palette.roof, palette.left, palette.right);
-      drawPrism(layer, station.x, station.y - 30, 80, 40, 20, shiftColor(palette.roof, 12), shiftColor(palette.left, 8), shiftColor(palette.right, 8));
-      layer.fillStyle(toColor("#f9f8f0"), 0.88);
-      layer.fillRect(station.x - 10, station.y + 6, 20, 20);
-    }
-
-    const plaque = this.add.text(station.x, station.y + station.height / 2 + 38, station.label, {
-      fontFamily: "Sora, Trebuchet MS, sans-serif",
-      fontSize: "14px",
-      color: "#112033",
-      backgroundColor: "#fff7e7",
-      padding: { x: 10, y: 5 }
-    }).setOrigin(0.5);
-    plaque.setDepth(20);
-  }
-
-  drawStaticWorld() {
-    if (!this.manifest) {
-      return;
-    }
-
-    const { width, height } = this.manifest.layout;
-    this.drawBackdrop(width, height);
-    this.drawIsland(width, height);
-
-    Object.entries(this.manifest.stations || {}).forEach(([stationId, station]) => {
-      this.stationNodes.set(stationId, station);
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance"
     });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    this.renderer.setSize(this.container.clientWidth || window.innerWidth, this.container.clientHeight || window.innerHeight);
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.08;
+    this.container.innerHTML = "";
+    this.container.appendChild(this.renderer.domElement);
 
-    this.drawRoads();
+    this.scene = new THREE.Scene();
+    this.scene.fog = new THREE.Fog("#6f8fb0", 18, 65);
 
-    Object.entries(this.manifest.stations || {}).forEach(([stationId, station]) => {
-      this.drawStation(stationId, station);
+    this.camera = new THREE.PerspectiveCamera(40, (this.container.clientWidth || window.innerWidth) / (this.container.clientHeight || window.innerHeight), 0.1, 200);
+    this.camera.position.copy(this.baseCameraPosition);
+    this.camera.lookAt(0, 2.5, 0);
+
+    this.addLights();
+    this.addStaticEnvironment();
+    await this.preloadAssets();
+
+    window.addEventListener("resize", this.handleResize);
+    window.addEventListener("pointermove", this.handlePointerMove, { passive: true });
+    this.handleResize();
+    this.animate();
+  }
+
+  addLights() {
+    const hemi = new THREE.HemisphereLight("#d8f3ff", "#58704c", 1.8);
+    this.scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight("#ffe7ba", 2.2);
+    sun.position.set(18, 24, 12);
+    this.scene.add(sun);
+
+    const fill = new THREE.DirectionalLight("#76d5ff", 0.72);
+    fill.position.set(-14, 10, -12);
+    this.scene.add(fill);
+  }
+
+  addStaticEnvironment() {
+    const island = new THREE.Group();
+
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(19.2, 24.5, 5.8, 10),
+      makeMaterial("#3f5b4b")
+    );
+    base.position.y = -2.7;
+    island.add(base);
+
+    const shelf = new THREE.Mesh(
+      new THREE.CylinderGeometry(20.8, 21.8, 1.4, 10),
+      makeMaterial("#5e7a5e")
+    );
+    shelf.position.y = -0.4;
+    island.add(shelf);
+
+    const lawn = new THREE.Mesh(
+      new THREE.CylinderGeometry(18.4, 19.6, 0.9, 10),
+      makeMaterial("#7ebc69")
+    );
+    lawn.position.y = 0.5;
+    island.add(lawn);
+
+    const plaza = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.6, 4.8, 0.24, 24),
+      makeMaterial("#d8dce3")
+    );
+    plaza.position.y = 0.98;
+    island.add(plaza);
+
+    const innerPlaza = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.6, 2.7, 0.16, 24),
+      makeMaterial("#f5f8fd")
+    );
+    innerPlaza.position.y = 1.1;
+    island.add(innerPlaza);
+
+    const centralHub = new THREE.Group();
+    const hubBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.9, 2.3, 0.9, 7),
+      makeMaterial("#889ecc")
+    );
+    hubBase.position.y = 1.52;
+    centralHub.add(hubBase);
+
+    const hubGlass = new THREE.Mesh(
+      new THREE.SphereGeometry(1.4, 20, 20),
+      new THREE.MeshPhysicalMaterial({
+        color: "#b7efff",
+        transparent: true,
+        opacity: 0.54,
+        roughness: 0.1,
+        transmission: 0.35
+      })
+    );
+    hubGlass.position.y = 3.0;
+    centralHub.add(hubGlass);
+
+    const hubRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.9, 0.12, 8, 24),
+      makeMaterial("#80f2ff")
+    );
+    hubRing.rotation.x = Math.PI / 2;
+    hubRing.position.y = 2.05;
+    centralHub.add(hubRing);
+    island.add(centralHub);
+
+    const ringGeometry = new THREE.TorusGeometry(9.8, 0.16, 10, 64);
+    const ring = new THREE.Mesh(ringGeometry, makeMaterial("#d8c39a"));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.94;
+    island.add(ring);
+
+    this.scene.add(island);
+    this.addDecor();
+    this.addQuestConsole();
+  }
+
+  addDecor() {
+    const decor = new THREE.Group();
+
+    for (let index = 0; index < 18; index += 1) {
+      const angle = (index / 18) * Math.PI * 2 + (index % 2 === 0 ? 0.08 : -0.08);
+      const radius = 13.5 + (index % 3) * 2.2;
+      const point = ellipsePoint(radius, radius * 0.74, angle);
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.14, 0.18, 1.1, 5),
+        makeMaterial("#71533a")
+      );
+      trunk.position.set(point.x, 1.05, point.z);
+      decor.add(trunk);
+
+      const crown = new THREE.Mesh(
+        new THREE.ConeGeometry(0.82 + (index % 2) * 0.14, 1.7, 6),
+        makeMaterial(index % 4 === 0 ? "#5f9962" : "#70b36f")
+      );
+      crown.position.set(point.x, 2.1, point.z);
+      decor.add(crown);
+    }
+
+    for (let index = 0; index < 12; index += 1) {
+      const angle = (index / 12) * Math.PI * 2 + 0.2;
+      const radius = 16.5 + (index % 2) * 1.6;
+      const point = ellipsePoint(radius, radius * 0.78, angle);
+      const rock = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.4 + (index % 3) * 0.12, 0),
+        makeMaterial(index % 2 === 0 ? "#8e918d" : "#737873")
+      );
+      rock.position.set(point.x, 1.1, point.z);
+      rock.rotation.set(index * 0.4, index * 0.7, index * 0.2);
+      decor.add(rock);
+    }
+
+    this.scene.add(decor);
+  }
+
+  addQuestConsole() {
+    const consoleGroup = new THREE.Group();
+    consoleGroup.position.set(0, 1.08, -5.4);
+
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.2, 1.45, 0.5, 6),
+      makeMaterial("#7588b3")
+    );
+    base.position.y = 0.35;
+    consoleGroup.add(base);
+
+    const prism = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.72, 0),
+      makeMaterial("#7cf5ff")
+    );
+    prism.position.y = 1.35;
+    consoleGroup.add(prism);
+
+    this.questConsole = consoleGroup;
+    this.scene.add(consoleGroup);
+  }
+
+  async preloadAssets() {
+    const entries = await Promise.all(HOUSE_ASSETS.map(async (name) => {
+      try {
+        const model = await this.loadModel(`${HOUSE_ASSET_BASE}/${name}`);
+        return [name, normalizePrototype(model.scene)];
+      } catch {
+        this.assetFailures = true;
+        return null;
+      }
+    }));
+
+    for (const entry of entries) {
+      if (!entry) {
+        continue;
+      }
+      this.assetLibrary.set(entry[0], entry[1]);
+    }
+  }
+
+  loadModel(url) {
+    return new Promise((resolve, reject) => {
+      this.assetLoader.load(url, resolve, undefined, reject);
     });
-
-    const title = this.add.text(width / 2, 32, "Jarvis World", {
-      fontFamily: "Sora, Trebuchet MS, sans-serif",
-      fontSize: "26px",
-      color: "#102137",
-      backgroundColor: "#fff7e5",
-      padding: { x: 16, y: 8 }
-    }).setOrigin(0.5);
-    title.setDepth(24);
   }
 
-  getStationPosition(stationId) {
-    const station = this.stationNodes.get(stationId) || this.stationNodes.get("dispatch-hall");
-    return { x: station.x, y: station.y + station.height / 2 - 8 };
+  cloneAsset(name, targetSize, extra = {}) {
+    const source = this.assetLibrary.get(name);
+    if (!source) {
+      return null;
+    }
+
+    const clone = source.clone(true);
+    clone.scale.multiplyScalar(targetSize);
+    if (extra.rotation) {
+      clone.rotation.set(extra.rotation.x || 0, extra.rotation.y || 0, extra.rotation.z || 0);
+    }
+    if (extra.position) {
+      clone.position.copy(extra.position);
+    }
+    return clone;
   }
 
-  getQuestSlot(index) {
-    const board = this.stationNodes.get("quest-board");
-    if (!board || !Array.isArray(board.workSlots) || board.workSlots.length === 0) {
-      return this.getStationPosition("quest-board");
+  rebuildVillage(agentList) {
+    for (const actor of this.agentActors.values()) {
+      this.scene.remove(actor.group);
+      this.scene.remove(actor.shadow);
+      if (actor.activity) {
+        this.scene.remove(actor.activity);
+      }
     }
-    return board.workSlots[index % board.workSlots.length];
+    this.agentActors.clear();
+
+    for (const home of this.homeGroups.values()) {
+      this.scene.remove(home);
+    }
+    this.homeGroups.clear();
+
+    this.lotMap = buildLots(agentList.map((agent) => agent.id));
+
+    for (const agent of agentList) {
+      const lot = this.lotMap.get(agent.id);
+      const homeGroup = this.createHome(agent, lot);
+      this.homeGroups.set(agent.id, homeGroup);
+      this.scene.add(homeGroup);
+
+      const actor = this.createGnome(agent, lot);
+      this.agentActors.set(agent.id, actor);
+      this.scene.add(actor.shadow);
+      this.scene.add(actor.group);
+      this.scene.add(actor.activity);
+    }
   }
 
-  resolveTarget(agent, index) {
-    if (agent.status === "working" && agent.motionTargetId === "quest-board") {
-      return this.getQuestSlot(index);
+  createHome(agent, lot) {
+    const manifestEntry = this.manifest?.agents?.[agent.id];
+    const seed = hashString(agent.id);
+    const house = new THREE.Group();
+    house.position.copy(lot.house);
+    house.rotation.y = lot.heading;
+
+    const pad = createRoundedPad("#ceb68c", agent.id === "main" ? 3.4 : 2.7);
+    house.add(pad);
+
+    const wallColor = seed % 2 === 0 ? "#f1ede2" : "#ddd7cb";
+    const trimColor = seed % 3 === 0 ? "#8f5b3b" : "#6f4e3a";
+    const roofColor = seed % 4 === 0 ? "#8f5d50" : seed % 4 === 1 ? "#6d5b9e" : seed % 4 === 2 ? "#8b6f46" : "#587b97";
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(agent.id === "main" ? 4.8 : 3.8, agent.id === "main" ? 3.2 : 2.6, agent.id === "main" ? 4.3 : 3.3),
+      makeMaterial(wallColor)
+    );
+    body.position.y = agent.id === "main" ? 2.35 : 1.95;
+    house.add(body);
+
+    const trim = new THREE.Mesh(
+      new THREE.BoxGeometry(agent.id === "main" ? 5.05 : 4.02, 0.24, agent.id === "main" ? 4.48 : 3.46),
+      makeMaterial(trimColor)
+    );
+    trim.position.y = body.position.y - (agent.id === "main" ? 0.52 : 0.44);
+    house.add(trim);
+
+    const roofBase = new THREE.Mesh(
+      new THREE.ConeGeometry(agent.id === "main" ? 3.8 : 3.0, agent.id === "main" ? 2.4 : 1.9, 4),
+      makeMaterial(roofColor)
+    );
+    roofBase.rotation.y = Math.PI / 4;
+    roofBase.position.y = agent.id === "main" ? 4.45 : 3.62;
+    house.add(roofBase);
+
+    const roofModel = this.cloneAsset(seed % 3 === 0 ? "roof-high-window.glb" : "roof-high.glb", agent.id === "main" ? 4.5 : 3.4, {
+      position: new THREE.Vector3(0, roofBase.position.y - 0.2, 0)
+    });
+    if (roofModel) {
+      roofModel.rotation.y = Math.PI;
+      house.add(roofModel);
     }
-    if (agent.status === "moving" && agent.motionTargetId && this.stationNodes.has(agent.motionTargetId)) {
-      return this.getStationPosition(agent.motionTargetId);
+
+    const doorModel = this.cloneAsset("wall-wood-door.glb", agent.id === "main" ? 1.55 : 1.25, {
+      position: new THREE.Vector3(0, 0.98, body.geometry.parameters.depth / 2 + 0.04)
+    });
+    if (doorModel) {
+      house.add(doorModel);
     }
-    return this.getStationPosition(agent.stationId);
+
+    const leftWindow = this.cloneAsset("wall-wood-window-small.glb", 0.96, {
+      position: new THREE.Vector3(-body.geometry.parameters.width / 2 - 0.02, 1.55, 0),
+      rotation: new THREE.Euler(0, Math.PI / 2, 0)
+    });
+    const rightWindow = this.cloneAsset("wall-wood-window-small.glb", 0.96, {
+      position: new THREE.Vector3(body.geometry.parameters.width / 2 + 0.02, 1.55, 0),
+      rotation: new THREE.Euler(0, -Math.PI / 2, 0)
+    });
+    if (leftWindow) {
+      house.add(leftWindow);
+    }
+    if (rightWindow) {
+      house.add(rightWindow);
+    }
+
+    const chimney = this.cloneAsset("chimney.glb", agent.id === "main" ? 0.85 : 0.62, {
+      position: new THREE.Vector3(0.85, roofBase.position.y + 0.4, -0.2)
+    });
+    if (chimney) {
+      house.add(chimney);
+    }
+
+    const lantern = this.cloneAsset("lantern.glb", 0.75, {
+      position: new THREE.Vector3(-1.25, 1.5, body.geometry.parameters.depth / 2 + 0.18)
+    });
+    if (lantern) {
+      house.add(lantern);
+    }
+
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(agent.id === "main" ? 0.4 : 0.26, 12, 12),
+      new THREE.MeshBasicMaterial({
+        color: manifestEntry?.palette?.[1] || roofColor,
+        transparent: true,
+        opacity: 0.28
+      })
+    );
+    glow.position.set(0, agent.id === "main" ? 4.8 : 3.95, 0);
+    house.add(glow);
+    house.userData.glow = glow;
+
+    return house;
   }
 
-  ensureAgent(agent) {
-    if (this.agentSprites.has(agent.id)) {
-      return;
+  createGnome(agent, lot) {
+    const manifestEntry = this.manifest?.agents?.[agent.id];
+    const palette = makePalette(agent, manifestEntry);
+    const hatColor = typeof palette.hat === "string" ? palette.hat : `#${palette.hat.getHexString()}`;
+    const coatColor = typeof palette.coat === "string" ? palette.coat : `#${palette.coat.getHexString()}`;
+    const beardColor = typeof palette.beard === "string" ? palette.beard : `#${palette.beard.getHexString()}`;
+
+    const group = new THREE.Group();
+    group.position.copy(lot.idle);
+
+    const hat = new THREE.Mesh(
+      new THREE.ConeGeometry(0.42, 0.92, 7),
+      makeMaterial(hatColor)
+    );
+    hat.position.y = 1.62;
+    group.add(hat);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 10, 10),
+      makeMaterial("#f6d8bc")
+    );
+    head.position.y = 1.18;
+    group.add(head);
+
+    const beard = new THREE.Mesh(
+      new THREE.ConeGeometry(0.28, 0.58, 6),
+      makeMaterial(beardColor)
+    );
+    beard.position.set(0, 0.88, 0.08);
+    beard.rotation.x = Math.PI;
+    group.add(beard);
+
+    const body = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.34, 0.76, 4, 8),
+      makeMaterial(coatColor)
+    );
+    body.position.y = 0.64;
+    group.add(body);
+
+    const nose = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 8),
+      makeMaterial("#f0c4a5")
+    );
+    nose.position.set(0, 1.08, 0.28);
+    group.add(nose);
+
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.46, 16),
+      new THREE.MeshBasicMaterial({
+        color: "#0a1020",
+        transparent: true,
+        opacity: 0.18
+      })
+    );
+    shadow.rotation.x = -Math.PI / 2;
+    shadow.position.set(lot.idle.x, 1.02, lot.idle.z);
+
+    const activity = new THREE.Mesh(
+      new THREE.TorusGeometry(0.54, 0.04, 8, 20),
+      makeMaterial(manifestEntry?.palette?.[1] || hatColor)
+    );
+    activity.rotation.x = Math.PI / 2;
+    activity.position.set(lot.idle.x, 2.48, lot.idle.z);
+    activity.visible = false;
+
+    return {
+      id: agent.id,
+      group,
+      shadow,
+      activity,
+      homeLot: lot,
+      phase: (hashString(agent.id) % 1000) / 1000,
+      velocity: new THREE.Vector3(),
+      target: lot.idle.clone()
+    };
+  }
+
+  updateTaskOrbs(tasks) {
+    while (this.taskOrbs.length < 4) {
+      const orb = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.18, 0),
+        new THREE.MeshBasicMaterial({
+          color: "#8ff5ff",
+          transparent: true,
+          opacity: 0.85
+        })
+      );
+      this.taskOrbs.push(orb);
+      this.scene.add(orb);
     }
 
-    const manifestAgent = this.manifest.agents?.[agent.id];
-    const [lightColor, darkColor] = manifestAgent?.palette || ["#f5f5f5", "#5c7aea"];
-    const spriteKey = `jarvis-world:${agent.spriteKey}:${lightColor}:${darkColor}`;
-    if (!this.textures.exists(spriteKey)) {
-      this.createAgentTexture(spriteKey, lightColor, darkColor);
-    }
-
-    const start = this.getStationPosition(agent.stationId);
-    const shadow = this.add.ellipse(start.x, start.y + 18, 26, 10, 0x1a1820, 0.18).setDepth(28);
-    const sprite = this.add.sprite(start.x, start.y, spriteKey).setScale(1.9).setDepth(30);
-    const label = this.add.text(start.x, start.y - 34, agent.name, {
-      fontFamily: "IBM Plex Sans, Trebuchet MS, sans-serif",
-      fontSize: "12px",
-      color: "#102233",
-      backgroundColor: "#fff7e7",
-      padding: { x: 7, y: 4 }
-    }).setOrigin(0.5).setDepth(32);
-
-    this.agentShadows.set(agent.id, shadow);
-    this.agentSprites.set(agent.id, sprite);
-    this.agentLabels.set(agent.id, label);
+    const activeTasks = (tasks || []).filter((task) => task.status === "running").slice(0, 4);
+    this.taskOrbs.forEach((orb, index) => {
+      orb.visible = index < activeTasks.length;
+      if (orb.visible) {
+        const angle = (index / Math.max(activeTasks.length, 1)) * Math.PI * 2;
+        orb.position.set(Math.cos(angle) * 1.4, 2.7 + index * 0.12, -5.4 + Math.sin(angle) * 1.1);
+      }
+    });
   }
 
   setState(state, isAdmin) {
-    this.currentState = state;
-    if (!this.manifest) {
-      return;
+    this.state = state;
+    this.isAdmin = isAdmin;
+
+    const agents = [...(state.agents || [])].sort((left, right) => {
+      if (left.id === "main") {
+        return -1;
+      }
+      if (right.id === "main") {
+        return 1;
+      }
+      return left.id.localeCompare(right.id);
+    });
+
+    const signature = agents.map((agent) => agent.id).join("|");
+    if (signature !== this.villageSignature) {
+      this.villageSignature = signature;
+      this.rebuildVillage(agents);
     }
 
-    (state.agents || []).forEach((agent, index) => {
-      this.ensureAgent(agent);
-      const sprite = this.agentSprites.get(agent.id);
-      const shadow = this.agentShadows.get(agent.id);
-      const label = this.agentLabels.get(agent.id);
-      const target = this.resolveTarget(agent, index);
+    const centerWork = new THREE.Vector3(0, 0, -3.2);
 
-      const scale = agent.status === "working" ? 2.02 : 1.9;
-      const alpha = agent.status === "offline" ? 0.45 : 1;
+    for (const agent of agents) {
+      const actor = this.agentActors.get(agent.id);
+      const lot = this.lotMap.get(agent.id);
+      const home = this.homeGroups.get(agent.id);
+      if (!actor || !lot || !home) {
+        continue;
+      }
 
-      this.tweens.add({
-        targets: sprite,
-        x: target.x,
-        y: target.y,
-        scale,
-        alpha,
-        duration: 1400,
-        ease: "Sine.easeInOut"
+      let target = lot.idle.clone();
+
+      if (agent.id === "main") {
+        if (agent.status === "moving" && agent.targetAgentId && this.lotMap.has(agent.targetAgentId)) {
+          target = this.lotMap.get(agent.targetAgentId).quest.clone();
+        } else if (agent.status === "working") {
+          target = lot.work.clone();
+        }
+      } else if (agent.status === "working" && agent.motionTargetId === "quest-board") {
+        target = centerWork.clone();
+      } else if (agent.status === "working") {
+        target = lot.work.clone();
+      } else if (agent.status === "moving") {
+        target = lot.quest.clone();
+      }
+
+      actor.target.copy(target);
+      actor.activity.visible = agent.status === "working";
+      actor.activity.material.opacity = agent.status === "offline" ? 0.12 : 0.88;
+      actor.group.visible = true;
+      actor.group.traverse((child) => {
+        if (child.material?.opacity !== undefined && !child.material.transparent) {
+          child.material.transparent = false;
+        }
       });
 
-      this.tweens.add({
-        targets: shadow,
-        x: target.x,
-        y: target.y + 18,
-        alpha: agent.status === "offline" ? 0.08 : 0.18,
-        width: agent.status === "moving" ? 22 : 26,
-        duration: 1400,
-        ease: "Sine.easeInOut"
-      });
+      const glow = home.userData.glow;
+      if (glow) {
+        glow.material.opacity = agent.status === "working" ? 0.44 : agent.status === "moving" ? 0.3 : 0.16;
+      }
+      home.position.copy(lot.house);
+      home.rotation.y = lot.heading;
+    }
 
-      const actionText = isAdmin
-        ? (agent.currentAction?.adminLabel || agent.name)
-        : (agent.currentAction?.publicLabel || agent.name);
+    this.updateTaskOrbs(state.tasks || []);
+  }
 
-      label.setText(`${agent.name}\n${truncateLabel(actionText, 34)}`);
-      label.setAlpha(agent.status === "offline" ? 0.7 : 1);
-      this.tweens.add({
-        targets: label,
-        x: target.x,
-        y: target.y - 36,
-        duration: 1400,
-        ease: "Sine.easeInOut"
-      });
-    });
+  animate() {
+    this.raf = requestAnimationFrame(() => this.animate());
+    const delta = clamp(this.clock.getDelta(), 0.001, 0.033);
+    const elapsed = this.clock.elapsedTime;
+
+    for (const actor of this.agentActors.values()) {
+      actor.group.position.lerp(actor.target, clamp(delta * 2.8, 0.04, 0.14));
+      actor.shadow.position.x = actor.group.position.x;
+      actor.shadow.position.z = actor.group.position.z;
+      actor.activity.position.x = actor.group.position.x;
+      actor.activity.position.z = actor.group.position.z;
+
+      const bob = Math.sin(elapsed * 2.6 + actor.phase * Math.PI * 2) * 0.08;
+      actor.group.position.y = 1.02 + bob;
+      actor.activity.position.y = 2.46 + Math.sin(elapsed * 2 + actor.phase * 5) * 0.08;
+      actor.activity.rotation.z += delta * 1.6;
+
+      if (actor.target.distanceToSquared(actor.group.position) > 0.3) {
+        const look = actor.target.clone();
+        look.y = actor.group.position.y;
+        actor.group.lookAt(look);
+      }
+    }
+
+    if (this.questConsole) {
+      this.questConsole.rotation.y += delta * 0.2;
+      this.questConsole.position.y = 1.08 + Math.sin(elapsed * 1.6) * 0.06;
+    }
+
+    for (let index = 0; index < this.taskOrbs.length; index += 1) {
+      const orb = this.taskOrbs[index];
+      if (!orb.visible) {
+        continue;
+      }
+      orb.rotation.x += delta * 1.2;
+      orb.rotation.y += delta * 1.8;
+      orb.position.y += Math.sin(elapsed * 2 + index) * 0.002;
+    }
+
+    this.camera.position.x = this.baseCameraPosition.x + this.pointer.x * 1.4;
+    this.camera.position.y = this.baseCameraPosition.y + this.pointer.y * 0.7 + Math.sin(elapsed * 0.35) * 0.25;
+    this.camera.lookAt(0, 2.35, 0);
+
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  handlePointerMove(event) {
+    const x = (event.clientX / window.innerWidth) * 2 - 1;
+    const y = (event.clientY / window.innerHeight) * 2 - 1;
+    this.pointer.set(clamp(x, -1, 1), clamp(-y, -1, 1));
+  }
+
+  handleResize() {
+    const width = this.container.clientWidth || window.innerWidth;
+    const height = this.container.clientHeight || window.innerHeight;
+    if (!this.renderer || !this.camera) {
+      return;
+    }
+    this.renderer.setSize(width, height);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
   }
 }

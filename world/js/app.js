@@ -1,20 +1,31 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410b";
-import { createDemoState } from "./demo-state.js?v=20260410b";
-import { bindUiElements, renderBridgePanel, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js?v=20260410b";
-import { JarvisWorldScene } from "./world-scene.js?v=20260410b";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410c";
+import { createDemoState } from "./demo-state.js?v=20260410c";
+import {
+  bindUiElements,
+  setGateVisible,
+  setGateMessage,
+  setDeckOpen,
+  renderMode,
+  renderBridgeStatus,
+  renderState,
+  showDispatchResult
+} from "./ui.js?v=20260410c";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410c";
 
 const ui = bindUiElements();
 const appState = {
   manifest: null,
-  lastWorldState: null,
+  bridgeConfig: {},
+  world: null,
   isAdmin: false,
+  enteredMode: null,
   pollTimer: null,
-  scene: null,
-  bridgeConfig: {}
+  lastWorldState: null,
+  deckOpen: false
 };
 
 async function loadManifest() {
-  const response = await fetch("./data/world-manifest.json");
+  const response = await fetch("./data/world-manifest.json", { cache: "no-store" });
   return response.json();
 }
 
@@ -31,208 +42,202 @@ async function loadBridgeConfig() {
   }
 }
 
+function addCandidate(list, value) {
+  const normalized = String(value || "").trim().replace(/\/$/, "");
+  if (normalized && !list.includes(normalized)) {
+    list.push(normalized);
+  }
+}
+
 function getBridgeCandidates(bridgeConfig) {
-  const configured = [];
-  const runtimeConfig = window.JARVIS_WORLD_CONFIG || {};
-
-  const add = (value) => {
-    const normalized = String(value || "").trim().replace(/\/$/, "");
-    if (normalized && !configured.includes(normalized)) {
-      configured.push(normalized);
-    }
-  };
-
-  add(localStorage.getItem("jarvis-world-api-base"));
-  add(bridgeConfig.apiBaseUrl);
-  add(runtimeConfig.defaultApiBaseUrl);
-
-  const candidates = []
-    .concat(runtimeConfig.bridgeCandidates || [])
-    .concat(bridgeConfig.bridgeCandidates || []);
-
-  for (const candidate of candidates) {
-    add(candidate);
+  const candidates = [];
+  addCandidate(candidates, localStorage.getItem("jarvis-world-api-base"));
+  addCandidate(candidates, bridgeConfig.apiBaseUrl);
+  addCandidate(candidates, window.JARVIS_WORLD_CONFIG.defaultApiBaseUrl);
+  for (const candidate of window.JARVIS_WORLD_CONFIG.bridgeCandidates || []) {
+    addCandidate(candidates, candidate);
   }
-
-  if (window.location.protocol.startsWith("http")) {
-    add(`${window.location.origin}`);
-
-    const host = window.location.hostname;
-    const protocol = window.location.protocol;
-    if (host && !host.startsWith("127.") && host !== "localhost") {
-      const parts = host.split(".");
-      if (parts.length >= 2) {
-        const rootDomain = parts.slice(-2).join(".");
-        add(`${protocol}//bridge.${rootDomain}`);
-        add(`${protocol}//api.${rootDomain}`);
-      }
-    }
-
-    if (host === "127.0.0.1" || host === "localhost") {
-      add(`${protocol}//${host}:4318`);
-    }
+  for (const candidate of bridgeConfig.bridgeCandidates || []) {
+    addCandidate(candidates, candidate);
   }
-
-  return configured;
+  if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+    addCandidate(candidates, `${window.location.protocol}//${window.location.hostname}:4318`);
+  }
+  return candidates;
 }
 
-async function chooseWorkingBridge(candidates) {
-  for (const candidate of candidates) {
-    try {
-      const response = await fetch(`${candidate}/world-api/health`, {
-        credentials: "omit",
-        mode: "cors",
-        cache: "no-store"
-      });
-      if (response.ok) {
-        return candidate;
-      }
-    } catch {
-      // Keep trying candidates.
-    }
+async function probeBridge(candidate) {
+  if (!candidate) {
+    return false;
   }
-
-  return "";
-}
-
-function uniqueCandidates(primary, bridgeConfig) {
-  const seen = new Set();
-  const result = [];
-
-  const add = (value) => {
-    const normalized = String(value || "").trim().replace(/\/$/, "");
-    if (!normalized || seen.has(normalized)) {
-      return;
-    }
-    seen.add(normalized);
-    result.push(normalized);
-  };
-
-  add(primary);
-  for (const candidate of getBridgeCandidates(bridgeConfig || {})) {
-    add(candidate);
-  }
-  return result;
-}
-
-async function resolveWorkingBridge(preferredBase = getApiBase()) {
-  const chosen = await chooseWorkingBridge(uniqueCandidates(preferredBase, appState.bridgeConfig));
-  if (chosen && chosen !== getApiBase()) {
-    setStoredApiBase(chosen);
-  }
-  return chosen;
-}
-
-async function retryAfterBridgeFailure() {
-  const previous = getApiBase();
-  const chosen = await resolveWorkingBridge("");
-  if (chosen) {
-    return chosen;
-  }
-  if (previous) {
-    setStoredApiBase(previous);
-  }
-  return "";
-}
-
-function createGame(manifest) {
-  const scene = new JarvisWorldScene();
-  scene.setManifest(manifest);
-  new Phaser.Game({
-    type: Phaser.AUTO,
-    width: manifest.layout.width,
-    height: manifest.layout.height,
-    parent: "world-game",
-    backgroundColor: "#87d37c",
-    pixelArt: true,
-    scene: [scene]
-  });
-  return scene;
-}
-
-async function refreshState() {
-  let apiBase = getApiBase();
-  if (apiBase) {
-    const healthy = await chooseWorkingBridge([apiBase]);
-    if (!healthy) {
-      apiBase = await retryAfterBridgeFailure();
-    }
-  } else {
-    apiBase = await resolveWorkingBridge("");
-  }
-
-  if (!apiBase) {
-    const demo = createDemoState(appState.manifest, appState.isAdmin ? "admin" : "guest");
-    appState.lastWorldState = demo;
-    renderBridgeStatus(ui, "No live bridge configured yet. The town is showing safe demo mode.", false);
-    renderState(ui, demo, appState.isAdmin, appState.manifest);
-    appState.scene.setState(demo, appState.isAdmin);
-    return;
-  }
-
   try {
-    const payload = appState.isAdmin ? await fetchAdminState() : await fetchPublicState();
-    appState.lastWorldState = payload.state;
-    renderBridgeStatus(ui, `Bridge online at ${apiBase}`, Boolean(payload.state.system.healthy));
-    renderState(ui, payload.state, appState.isAdmin, appState.manifest);
-    appState.scene.setState(payload.state, appState.isAdmin);
-  } catch (error) {
-    if (error.message.includes("Bridge unreachable")) {
-      const recoveredBase = await retryAfterBridgeFailure();
-      if (recoveredBase && recoveredBase !== apiBase) {
-        try {
-          const payload = appState.isAdmin ? await fetchAdminState() : await fetchPublicState();
-          appState.lastWorldState = payload.state;
-          renderBridgeStatus(ui, `Bridge online at ${recoveredBase}`, Boolean(payload.state.system.healthy));
-          renderState(ui, payload.state, appState.isAdmin, appState.manifest);
-          appState.scene.setState(payload.state, appState.isAdmin);
-          return;
-        } catch {
-          // Fall through to demo mode if the recovered bridge still fails.
-        }
-      }
-    }
-
-    const demo = createDemoState(appState.manifest, appState.isAdmin ? "admin" : "guest");
-    appState.lastWorldState = demo;
-    renderBridgeStatus(ui, `${error.message}. Check your public bridge URL and bridge CORS/cookie settings.`, false);
-    renderState(ui, demo, appState.isAdmin, appState.manifest);
-    appState.scene.setState(demo, appState.isAdmin);
+    const response = await fetch(`${candidate}/world-api/health`, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store",
+      credentials: "omit"
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
+}
+
+async function resolveWorkingBridge() {
+  for (const candidate of getBridgeCandidates(appState.bridgeConfig)) {
+    if (await probeBridge(candidate)) {
+      setStoredApiBase(candidate);
+      return candidate;
+    }
+  }
+  return "";
+}
+
+function currentMode() {
+  return appState.isAdmin ? "admin" : "guest";
+}
+
+function setEnteredMode(mode) {
+  appState.enteredMode = mode;
+  appState.isAdmin = mode === "admin";
+  renderMode(ui, currentMode(), Boolean(appState.enteredMode));
 }
 
 function startPolling() {
   if (appState.pollTimer) {
     clearInterval(appState.pollTimer);
   }
-  appState.pollTimer = setInterval(refreshState, window.JARVIS_WORLD_CONFIG.pollMs || 5000);
+  appState.pollTimer = setInterval(() => {
+    refreshState();
+  }, window.JARVIS_WORLD_CONFIG.pollMs || 5000);
+}
+
+async function refreshState() {
+  const apiBase = getApiBase();
+  if (!apiBase) {
+    const demo = createDemoState(appState.manifest, currentMode());
+    appState.lastWorldState = demo;
+    renderBridgeStatus(ui, "No public bridge was reachable. The village is running in safe demo mode.", false, demo);
+    renderState(ui, demo, appState.isAdmin);
+    appState.world?.setState(demo, appState.isAdmin);
+    return;
+  }
+
+  try {
+    const payload = appState.isAdmin ? await fetchAdminState() : await fetchPublicState();
+    appState.lastWorldState = payload.state;
+    renderBridgeStatus(
+      ui,
+      `Bridge online at ${apiBase}. Gateway ${payload.state.system.gatewayStatus}.`,
+      Boolean(payload.state.system.healthy),
+      payload.state
+    );
+    renderState(ui, payload.state, appState.isAdmin);
+    appState.world?.setState(payload.state, appState.isAdmin);
+  } catch (error) {
+    if (appState.isAdmin && error.message.includes("Admin login required")) {
+      setEnteredMode(null);
+      setGateVisible(ui, true, "Your admin session expired. Unlock admin mode again or continue as guest.");
+      try {
+        const payload = await fetchPublicState();
+        appState.lastWorldState = payload.state;
+        renderBridgeStatus(
+          ui,
+          `Bridge online at ${getApiBase()}. Guest-safe view restored.`,
+          Boolean(payload.state.system.healthy),
+          payload.state
+        );
+        renderState(ui, payload.state, false);
+        appState.world?.setState(payload.state, false);
+        return;
+      } catch {
+        // Fall through to demo state if even guest mode fails.
+      }
+    }
+
+    const recovered = await resolveWorkingBridge();
+    if (recovered && recovered !== apiBase) {
+      try {
+        const payload = appState.isAdmin ? await fetchAdminState() : await fetchPublicState();
+        appState.lastWorldState = payload.state;
+        renderBridgeStatus(
+          ui,
+          `Bridge online at ${recovered}. Gateway ${payload.state.system.gatewayStatus}.`,
+          Boolean(payload.state.system.healthy),
+          payload.state
+        );
+        renderState(ui, payload.state, appState.isAdmin);
+        appState.world?.setState(payload.state, appState.isAdmin);
+        return;
+      } catch {
+        // Fall through to demo state.
+      }
+    }
+
+    const demo = createDemoState(appState.manifest, currentMode());
+    appState.lastWorldState = demo;
+    renderBridgeStatus(ui, `${error.message}. Falling back to guest-safe demo mode.`, false, demo);
+    renderState(ui, demo, appState.isAdmin);
+    appState.world?.setState(demo, appState.isAdmin);
+  }
+}
+
+async function attemptAdminRestore() {
+  try {
+    const payload = await fetchAdminState();
+    setEnteredMode("admin");
+    setGateVisible(ui, false);
+    renderBridgeStatus(
+      ui,
+      `Admin session restored. Bridge online at ${getApiBase()}.`,
+      Boolean(payload.state.system.healthy),
+      payload.state
+    );
+    renderState(ui, payload.state, true);
+    appState.lastWorldState = payload.state;
+    appState.world?.setState(payload.state, true);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function wireUi() {
-  ui.apiBaseInput.value = getApiBase();
-  renderBridgePanel(ui, Boolean(window.JARVIS_WORLD_CONFIG.showBridgeControls));
-
-  ui.saveApiBaseButton.addEventListener("click", () => {
-    const value = setStoredApiBase(ui.apiBaseInput.value);
-    ui.apiBaseInput.value = value;
-    refreshState();
+  ui.deckToggle.addEventListener("click", () => {
+    appState.deckOpen = !appState.deckOpen;
+    setDeckOpen(ui, appState.deckOpen);
   });
 
-  ui.refreshButton.addEventListener("click", () => {
-    refreshState();
+  ui.deckClose.addEventListener("click", () => {
+    appState.deckOpen = false;
+    setDeckOpen(ui, false);
+  });
+
+  ui.modeChip.addEventListener("click", () => {
+    if (appState.isAdmin) {
+      return;
+    }
+    setGateVisible(ui, true, "Choose guest mode or unlock admin mode.");
+  });
+
+  ui.guestEnterButton.addEventListener("click", async () => {
+    setEnteredMode("guest");
+    setGateVisible(ui, false);
+    await refreshState();
   });
 
   ui.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     ui.loginButton.disabled = true;
+    setGateMessage(ui, "Unlocking admin world...");
     try {
       await login(ui.passwordInput.value);
-      appState.isAdmin = true;
-      renderMode(ui, true);
       ui.passwordInput.value = "";
+      setEnteredMode("admin");
+      setGateVisible(ui, false);
       await refreshState();
     } catch (error) {
-      ui.authStatus.textContent = error.message;
+      setGateMessage(ui, error.message);
     } finally {
       ui.loginButton.disabled = false;
     }
@@ -240,14 +245,15 @@ function wireUi() {
 
   ui.logoutButton.addEventListener("click", async () => {
     await logout().catch(() => null);
+    setEnteredMode(null);
     appState.isAdmin = false;
-    renderMode(ui, false);
+    setGateVisible(ui, true, "You logged out. Choose guest mode or unlock admin again.");
     await refreshState();
   });
 
   ui.dispatchForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const message = ui.dispatchInput.value.trim();
+    const message = String(ui.dispatchInput.value || "").trim();
     if (!message) {
       return;
     }
@@ -255,8 +261,7 @@ function wireUi() {
     ui.dispatchButton.disabled = true;
     try {
       const response = await dispatch(message);
-      const reply = response.replyText || "Jarvis accepted the dispatch, but there was no text reply.";
-      showDispatchResult(ui, reply, !response.ok);
+      showDispatchResult(ui, response.replyText || "Jarvis accepted the dispatch.");
       ui.dispatchInput.value = "";
       await refreshState();
     } catch (error) {
@@ -267,24 +272,29 @@ function wireUi() {
   });
 }
 
-async function main() {
+async function bootstrap() {
   appState.manifest = await loadManifest();
-  const bridgeConfig = await loadBridgeConfig();
-  appState.bridgeConfig = bridgeConfig;
-  await resolveWorkingBridge(getApiBase());
-  window.JARVIS_WORLD_CONFIG.showBridgeControls = Boolean(
-    bridgeConfig.showBridgeControls ?? window.JARVIS_WORLD_CONFIG.showBridgeControls
-  );
-  if (bridgeConfig.allowManualBridgeOverride === false) {
-    window.JARVIS_WORLD_CONFIG.showBridgeControls = false;
-  }
-  appState.scene = createGame(appState.manifest);
+  appState.bridgeConfig = await loadBridgeConfig();
+  await resolveWorkingBridge();
+
+  appState.world = new JarvisWorldScene(document.getElementById("world-stage"));
+  await appState.world.init(appState.manifest);
+
   wireUi();
-  renderMode(ui, false);
+  renderMode(ui, "guest", false);
+  setDeckOpen(ui, false);
+  setGateVisible(ui, true, "Checking for a saved admin session...");
+
   await refreshState();
   startPolling();
+
+  const restored = await attemptAdminRestore();
+  if (!restored) {
+    setEnteredMode(null);
+    setGateVisible(ui, true, "Choose guest mode or unlock admin mode.");
+  }
 }
 
-main().catch((error) => {
-  renderBridgeStatus(ui, `Startup failed: ${error.message}`, false);
+bootstrap().catch((error) => {
+  setGateVisible(ui, true, `Startup failed: ${error.message}`);
 });

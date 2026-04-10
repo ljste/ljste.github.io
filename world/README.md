@@ -1,6 +1,6 @@
 # Jarvis World
 
-Public static frontend for the Jarvis tiny-town observatory.
+Public static frontend for the Jarvis World observatory.
 
 ## Safety
 
@@ -10,18 +10,26 @@ Public static frontend for the Jarvis tiny-town observatory.
 
 ## How it works
 
+- The first screen is the access gate.
 - Guest mode shows a sanitized live world.
-- Admin mode talks to the private bridge and unlocks richer detail plus one control: dispatching a message to Jarvis.
+- Admin mode talks to the private bridge and unlocks the Jarvis command lane plus richer detail.
 - The frontend polls the bridge every 5 seconds and animates between snapshots.
 - The deployed site should learn its bridge URL from `data/bridge-config.json`, not from per-device manual input.
-- The town art is intentionally procedural. `js/world-scene.js` draws a faux-isometric island and station buildings with Phaser graphics, so future edits do not depend on an external art pipeline.
+- The world is now a full-screen 3D village in `js/world-scene.js`.
+
+## Visual system
+
+- Agent homes are generated from the live roster, so a new subagent automatically gets its own lot.
+- The public house kit under `assets/models/kenney-town/` is CC0 art from Kenney.
+- Agent gnomes are procedural for performance and easier future edits.
+- `data/world-manifest.json` is now mostly a source of display names and palettes; the 3D home layout is generated at runtime.
 
 ## Add a new agent later
 
 1. Add the real agent to your private OpenClaw config.
 2. Optionally add a visual entry for that agent in `data/world-manifest.json`.
-3. If you skip step 2, the frontend still renders the new agent with fallback visuals.
-4. If you want custom placement or a more bespoke building, update the station metadata in `data/world-manifest.json` and the station drawing branch in `js/world-scene.js`.
+3. If you skip step 2, the frontend still renders the new agent with a generated home and fallback palette.
+4. If you want a more bespoke look, update the palette metadata in `data/world-manifest.json` and the home-generation logic in `js/world-scene.js`.
 
 ## Local testing
 
@@ -32,4 +40,4 @@ Public static frontend for the Jarvis tiny-town observatory.
 
 - Put the public bridge URL in `data/bridge-config.json`.
 - For admin mode across devices, the bridge must be public HTTPS and must allow the deployed site origin.
-- The bridge controls are hidden by default because the intended setup is one configured bridge URL for everyone, not per-user manual entry.
+- Admin session persistence depends on the private bridge cookie settings, not on anything in this public folder.
