@@ -1,11 +1,42 @@
+function manualOverrideAllowed() {
+  return Boolean(
+    window.JARVIS_WORLD_CONFIG.allowManualBridgeOverride
+    || window.JARVIS_WORLD_CONFIG.bridgeConfig?.allowManualBridgeOverride
+  );
+}
+
+function getConfiguredApiBase() {
+  return String(
+    window.JARVIS_WORLD_CONFIG.bridgeConfig?.apiBaseUrl
+    || window.JARVIS_WORLD_CONFIG.defaultApiBaseUrl
+    || ""
+  ).trim().replace(/\/$/, "");
+}
+
 function getStoredApiBase() {
-  return localStorage.getItem("jarvis-world-api-base") || window.JARVIS_WORLD_CONFIG.defaultApiBaseUrl || "";
+  const configured = getConfiguredApiBase();
+  const stored = String(localStorage.getItem("jarvis-world-api-base") || "").trim().replace(/\/$/, "");
+
+  if (!manualOverrideAllowed()) {
+    if (stored && configured && stored !== configured) {
+      localStorage.removeItem("jarvis-world-api-base");
+    }
+    return configured || stored || "";
+  }
+
+  return stored || configured || "";
 }
 
 export function setStoredApiBase(value) {
   const trimmed = String(value || "").trim().replace(/\/$/, "");
-  localStorage.setItem("jarvis-world-api-base", trimmed);
+  if (manualOverrideAllowed()) {
+    localStorage.setItem("jarvis-world-api-base", trimmed);
+  }
   return trimmed;
+}
+
+export function clearStoredApiBase() {
+  localStorage.removeItem("jarvis-world-api-base");
 }
 
 export function getApiBase() {
@@ -21,6 +52,7 @@ async function request(pathname, options = {}) {
   let response;
   try {
     response = await fetch(buildUrl(pathname), {
+      cache: "no-store",
       credentials: options.credentials || "omit",
       ...options,
       headers: {

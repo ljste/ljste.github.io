@@ -1,5 +1,5 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410h";
-import { createDemoState } from "./demo-state.js?v=20260410h";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase, clearStoredApiBase } from "./api.js?v=20260410i";
+import { createDemoState } from "./demo-state.js?v=20260410i";
 import {
   bindUiElements,
   setGateVisible,
@@ -9,8 +9,8 @@ import {
   renderBridgeStatus,
   renderState,
   showDispatchResult
-} from "./ui.js?v=20260410h";
-import { JarvisWorldScene } from "./world-scene.js?v=20260410h";
+} from "./ui.js?v=20260410i";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410i";
 
 const ui = bindUiElements();
 const appState = {
@@ -52,9 +52,11 @@ function addCandidate(list, value) {
 
 function getBridgeCandidates(bridgeConfig) {
   const candidates = [];
-  addCandidate(candidates, localStorage.getItem("jarvis-world-api-base"));
   addCandidate(candidates, bridgeConfig.apiBaseUrl);
   addCandidate(candidates, window.JARVIS_WORLD_CONFIG.defaultApiBaseUrl);
+  if (bridgeConfig.allowManualBridgeOverride || window.JARVIS_WORLD_CONFIG.allowManualBridgeOverride) {
+    addCandidate(candidates, localStorage.getItem("jarvis-world-api-base"));
+  }
   for (const candidate of window.JARVIS_WORLD_CONFIG.bridgeCandidates || []) {
     addCandidate(candidates, candidate);
   }
@@ -270,6 +272,14 @@ function wireUi() {
       setGateVisible(ui, false);
       await refreshState();
     } catch (error) {
+      if (error.message.includes("Invalid JSON response")) {
+        clearStoredApiBase();
+        const recovered = await resolveWorkingBridge();
+        if (recovered) {
+          setGateMessage(ui, "Bridge endpoint refreshed. Please try the password again.");
+          return;
+        }
+      }
       setGateMessage(ui, error.message);
     } finally {
       ui.loginButton.disabled = false;
@@ -308,6 +318,7 @@ function wireUi() {
 async function bootstrap() {
   appState.manifest = await loadManifest();
   appState.bridgeConfig = await loadBridgeConfig();
+  window.JARVIS_WORLD_CONFIG.bridgeConfig = appState.bridgeConfig;
   await resolveWorkingBridge();
 
   appState.world = new JarvisWorldScene(document.getElementById("world-stage"), {

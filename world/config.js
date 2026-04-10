@@ -3,6 +3,6 @@ window.JARVIS_WORLD_CONFIG = {
   defaultApiBaseUrl: "",
   bridgeConfigPath: "./data/bridge-config.json",
   showBridgeControls: false,
-  allowManualBridgeOverride: true,
+  allowManualBridgeOverride: false,
   bridgeCandidates: []
 };

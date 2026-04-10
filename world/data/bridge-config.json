@@ -1,7 +1,7 @@
 ﻿{
     "apiBaseUrl":  "https://nonvolitional-miasmal-nilsa.ngrok-free.dev",
     "showBridgeControls":  false,
-    "allowManualBridgeOverride":  true,
+    "allowManualBridgeOverride":  false,
     "bridgeCandidates":  [
 
                          ]
