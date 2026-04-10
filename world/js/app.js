@@ -1,7 +1,7 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260409b";
-import { createDemoState } from "./demo-state.js?v=20260409b";
-import { bindUiElements, renderBridgePanel, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js?v=20260409b";
-import { JarvisWorldScene } from "./world-scene.js?v=20260409b";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410b";
+import { createDemoState } from "./demo-state.js?v=20260410b";
+import { bindUiElements, renderBridgePanel, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js?v=20260410b";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410b";
 
 const ui = bindUiElements();
 const appState = {
@@ -165,7 +165,7 @@ async function refreshState() {
     const demo = createDemoState(appState.manifest, appState.isAdmin ? "admin" : "guest");
     appState.lastWorldState = demo;
     renderBridgeStatus(ui, "No live bridge configured yet. The town is showing safe demo mode.", false);
-    renderState(ui, demo, appState.isAdmin);
+    renderState(ui, demo, appState.isAdmin, appState.manifest);
     appState.scene.setState(demo, appState.isAdmin);
     return;
   }
@@ -174,7 +174,7 @@ async function refreshState() {
     const payload = appState.isAdmin ? await fetchAdminState() : await fetchPublicState();
     appState.lastWorldState = payload.state;
     renderBridgeStatus(ui, `Bridge online at ${apiBase}`, Boolean(payload.state.system.healthy));
-    renderState(ui, payload.state, appState.isAdmin);
+    renderState(ui, payload.state, appState.isAdmin, appState.manifest);
     appState.scene.setState(payload.state, appState.isAdmin);
   } catch (error) {
     if (error.message.includes("Bridge unreachable")) {
@@ -184,7 +184,7 @@ async function refreshState() {
           const payload = appState.isAdmin ? await fetchAdminState() : await fetchPublicState();
           appState.lastWorldState = payload.state;
           renderBridgeStatus(ui, `Bridge online at ${recoveredBase}`, Boolean(payload.state.system.healthy));
-          renderState(ui, payload.state, appState.isAdmin);
+          renderState(ui, payload.state, appState.isAdmin, appState.manifest);
           appState.scene.setState(payload.state, appState.isAdmin);
           return;
         } catch {
@@ -196,7 +196,7 @@ async function refreshState() {
     const demo = createDemoState(appState.manifest, appState.isAdmin ? "admin" : "guest");
     appState.lastWorldState = demo;
     renderBridgeStatus(ui, `${error.message}. Check your public bridge URL and bridge CORS/cookie settings.`, false);
-    renderState(ui, demo, appState.isAdmin);
+    renderState(ui, demo, appState.isAdmin, appState.manifest);
     appState.scene.setState(demo, appState.isAdmin);
   }
 }
