@@ -20,6 +20,7 @@ Public static frontend for the Jarvis World observatory.
 ## Visual system
 
 - Agent homes are generated from the live roster, so a new subagent automatically gets its own lot.
+- Lots are intentionally generated as loose neighborhoods instead of a perfect ring, so the village can sprawl as new subagents appear.
 - The public house kit under `assets/models/kenney-town/` is CC0 art from Kenney.
 - Agent gnomes are procedural for performance and easier future edits.
 - `data/world-manifest.json` is now mostly a source of display names and palettes; the 3D home layout is generated at runtime.
@@ -35,6 +36,11 @@ Public static frontend for the Jarvis World observatory.
 
 - Start the private bridge from its private sibling folder.
 - Serve this folder with any static server, or open it via your local site workflow.
+- Camera controls:
+  - drag to orbit
+  - right-drag or Shift-drag to pan
+  - scroll to zoom
+  - `WASD` / arrow keys pan, `Q` / `E` orbit, `R` / `F` zoom
 
 ## Bridge deployment
 
