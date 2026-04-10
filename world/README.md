@@ -38,10 +38,11 @@ Public static frontend for the Jarvis World observatory.
 - Start the private bridge from its private sibling folder.
 - Serve this folder with any static server, or open it via your local site workflow.
 - Camera controls:
-  - drag to orbit
-  - right-drag or Shift-drag to pan
-  - scroll to zoom
-  - `WASD` / arrow keys pan, `Q` / `E` orbit, `R` / `F` zoom
+  - left-click and drag to pan across the village like a map
+  - right-click and drag to orbit
+  - scroll or trackpad pinch to zoom
+  - two-finger drag / twist rotates and zooms on touch devices
+  - arrow keys pan when the scene is focused
 - Admin interaction:
   - click any gnome or agent card in admin mode to open its detail view in the control deck
 

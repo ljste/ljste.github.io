@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MapControls } from "three/addons/controls/MapControls.js";
 
 const HOUSE_ASSET_BASE = "../assets/models/kenney-town";
 const HOUSE_ASSETS = [
@@ -226,6 +227,7 @@ export class JarvisWorldScene {
     this.renderer = null;
     this.scene = null;
     this.camera = null;
+    this.controls = null;
     this.clock = new THREE.Clock();
     this.assetLoader = new GLTFLoader();
     this.assetLibrary = new Map();
@@ -241,25 +243,24 @@ export class JarvisWorldScene {
     this.worldRadius = 58;
     this.pointerState = {
       active: false,
-      mode: "orbit",
       pointerId: null,
+      button: 0,
       startX: 0,
       startY: 0,
-      lastX: 0,
-      lastY: 0,
       moved: false
     };
-    this.cameraState = {
+    this.cameraDefaults = {
       azimuth: 0.48,
       elevation: 0.62,
       distance: 47,
       target: new THREE.Vector3(0, 3.4, 4)
     };
-    this.cameraGoal = {
-      azimuth: 0.48,
-      elevation: 0.62,
-      distance: 47,
-      target: new THREE.Vector3(0, 3.4, 4)
+    this.cameraBounds = {
+      minX: -38,
+      maxX: 38,
+      minZ: -34,
+      maxZ: 46,
+      targetY: 3.4
     };
     this.centerWorkTarget = new THREE.Vector3(0, 0, -7.4);
     this.scratch = {
@@ -278,8 +279,6 @@ export class JarvisWorldScene {
     this.handlePointerDown = this.handlePointerDown.bind(this);
     this.handlePointerMove = this.handlePointerMove.bind(this);
     this.handlePointerUp = this.handlePointerUp.bind(this);
-    this.handleWheel = this.handleWheel.bind(this);
-    this.handleKeyDown = this.handleKeyDown.bind(this);
     this.preventContextMenu = this.preventContextMenu.bind(this);
   }
 
@@ -322,7 +321,7 @@ export class JarvisWorldScene {
       0.1,
       220
     );
-    this.updateCamera(true);
+    this.setInitialCameraPose();
 
     this.addLights();
     this.addStaticEnvironment();
@@ -1024,14 +1023,38 @@ export class JarvisWorldScene {
 
   attachControls() {
     const dom = this.renderer.domElement;
+    this.controls = new MapControls(this.camera, dom);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.085;
+    this.controls.enableRotate = true;
+    this.controls.enablePan = true;
+    this.controls.enableZoom = true;
+    this.controls.screenSpacePanning = false;
+    this.controls.zoomToCursor = true;
+    this.controls.rotateSpeed = 0.72;
+    this.controls.panSpeed = 1.08;
+    this.controls.zoomSpeed = 0.82;
+    this.controls.minDistance = 24;
+    this.controls.maxDistance = 76;
+    this.controls.minPolarAngle = 0.35;
+    this.controls.maxPolarAngle = 1.15;
+    this.controls.maxTargetRadius = 58;
+    this.controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+    this.controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+    this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+    this.controls.touches.ONE = THREE.TOUCH.PAN;
+    this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+    this.controls.keyPanSpeed = 20;
+    this.controls.listenToKeyEvents(window);
+    this.controls.target.copy(this.cameraDefaults.target);
+    this.controls.update();
+
     dom.addEventListener("pointerdown", this.handlePointerDown);
     dom.addEventListener("pointermove", this.handlePointerMove);
     dom.addEventListener("pointerup", this.handlePointerUp);
     dom.addEventListener("pointercancel", this.handlePointerUp);
-    dom.addEventListener("wheel", this.handleWheel, { passive: false });
     dom.addEventListener("contextmenu", this.preventContextMenu);
     window.addEventListener("resize", this.handleResize);
-    window.addEventListener("keydown", this.handleKeyDown);
   }
 
   preventContextMenu(event) {
@@ -1039,46 +1062,24 @@ export class JarvisWorldScene {
   }
 
   handlePointerDown(event) {
-    if (event.button > 1 && event.pointerType !== "touch") {
+    if (event.button > 2 && event.pointerType !== "touch") {
       return;
     }
     this.pointerState.active = true;
     this.pointerState.pointerId = event.pointerId;
+    this.pointerState.button = event.button;
     this.pointerState.startX = event.clientX;
     this.pointerState.startY = event.clientY;
-    this.pointerState.lastX = event.clientX;
-    this.pointerState.lastY = event.clientY;
     this.pointerState.moved = false;
-    this.pointerState.mode = event.pointerType === "touch" ? "orbit" : (event.button === 2 || event.shiftKey ? "pan" : "orbit");
-    event.target.setPointerCapture?.(event.pointerId);
   }
 
   handlePointerMove(event) {
     if (!this.pointerState.active || event.pointerId !== this.pointerState.pointerId) {
       return;
     }
-
-    const width = this.container.clientWidth || window.innerWidth;
-    const height = this.container.clientHeight || window.innerHeight;
-    const dx = (event.clientX - this.pointerState.lastX) / width;
-    const dy = (event.clientY - this.pointerState.lastY) / height;
-    this.pointerState.lastX = event.clientX;
-    this.pointerState.lastY = event.clientY;
-    if (Math.abs(event.clientX - this.pointerState.startX) + Math.abs(event.clientY - this.pointerState.startY) > 6) {
+    const distance = Math.abs(event.clientX - this.pointerState.startX) + Math.abs(event.clientY - this.pointerState.startY);
+    if (distance > 6) {
       this.pointerState.moved = true;
-    }
-
-    if (this.pointerState.mode === "pan") {
-      const panScale = this.cameraGoal.distance * 0.045;
-      const right = this.scratch.vectorA.set(Math.cos(this.cameraGoal.azimuth), 0, -Math.sin(this.cameraGoal.azimuth));
-      const forward = this.scratch.vectorB.set(-Math.sin(this.cameraGoal.azimuth), 0, -Math.cos(this.cameraGoal.azimuth));
-      this.cameraGoal.target.addScaledVector(right, -dx * panScale);
-      this.cameraGoal.target.addScaledVector(forward, dy * panScale);
-      this.cameraGoal.target.x = clamp(this.cameraGoal.target.x, -34, 34);
-      this.cameraGoal.target.z = clamp(this.cameraGoal.target.z, -30, 42);
-    } else {
-      this.cameraGoal.azimuth -= dx * 4.6;
-      this.cameraGoal.elevation = clamp(this.cameraGoal.elevation + dy * 2.4, 0.35, 1.15);
     }
   }
 
@@ -1086,78 +1087,13 @@ export class JarvisWorldScene {
     if (event.pointerId !== this.pointerState.pointerId) {
       return;
     }
-    const shouldPick = this.pointerState.mode === "orbit" && !this.pointerState.moved;
+    const shouldPick = !this.pointerState.moved && (event.pointerType === "touch" || this.pointerState.button === 0);
     this.pointerState.active = false;
     this.pointerState.pointerId = null;
+    this.pointerState.button = 0;
     if (shouldPick) {
       this.pickAgentAt(event.clientX, event.clientY);
     }
-  }
-
-  handleWheel(event) {
-    event.preventDefault();
-    this.cameraGoal.distance = clamp(this.cameraGoal.distance + event.deltaY * 0.018, 24, 76);
-  }
-
-  handleKeyDown(event) {
-    const isTyping = ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName);
-    if (isTyping) {
-      return;
-    }
-
-    const panStep = Math.max(1.2, this.cameraGoal.distance * 0.055);
-    const right = this.scratch.vectorA.set(Math.cos(this.cameraGoal.azimuth), 0, -Math.sin(this.cameraGoal.azimuth));
-    const forward = this.scratch.vectorB.set(-Math.sin(this.cameraGoal.azimuth), 0, -Math.cos(this.cameraGoal.azimuth));
-    let handled = true;
-
-    switch (event.key) {
-      case "ArrowUp":
-      case "w":
-      case "W":
-        this.cameraGoal.target.addScaledVector(forward, panStep);
-        break;
-      case "ArrowDown":
-      case "s":
-      case "S":
-        this.cameraGoal.target.addScaledVector(forward, -panStep);
-        break;
-      case "ArrowLeft":
-      case "a":
-      case "A":
-        this.cameraGoal.target.addScaledVector(right, -panStep);
-        break;
-      case "ArrowRight":
-      case "d":
-      case "D":
-        this.cameraGoal.target.addScaledVector(right, panStep);
-        break;
-      case "q":
-      case "Q":
-        this.cameraGoal.azimuth += 0.18;
-        break;
-      case "e":
-      case "E":
-        this.cameraGoal.azimuth -= 0.18;
-        break;
-      case "r":
-      case "R":
-        this.cameraGoal.distance = clamp(this.cameraGoal.distance - 2.4, 24, 76);
-        break;
-      case "f":
-      case "F":
-        this.cameraGoal.distance = clamp(this.cameraGoal.distance + 2.4, 24, 76);
-        break;
-      default:
-        handled = false;
-    }
-
-    if (!handled) {
-      return;
-    }
-
-    this.cameraGoal.target.x = clamp(this.cameraGoal.target.x, -34, 34);
-    this.cameraGoal.target.z = clamp(this.cameraGoal.target.z, -30, 42);
-    event.preventDefault();
   }
 
   pickAgentAt(clientX, clientY) {
@@ -1178,21 +1114,36 @@ export class JarvisWorldScene {
     }
   }
 
-  updateCamera(immediate = false) {
-    const blend = immediate ? 1 : 0.08;
-    this.cameraState.azimuth = THREE.MathUtils.lerp(this.cameraState.azimuth, this.cameraGoal.azimuth, blend);
-    this.cameraState.elevation = THREE.MathUtils.lerp(this.cameraState.elevation, this.cameraGoal.elevation, blend);
-    this.cameraState.distance = THREE.MathUtils.lerp(this.cameraState.distance, this.cameraGoal.distance, blend);
-    this.cameraState.target.lerp(this.cameraGoal.target, blend);
-
-    const horizontal = Math.cos(this.cameraState.elevation) * this.cameraState.distance;
-    const vertical = Math.sin(this.cameraState.elevation) * this.cameraState.distance;
+  setInitialCameraPose() {
+    const { azimuth, elevation, distance, target } = this.cameraDefaults;
+    const horizontal = Math.cos(elevation) * distance;
+    const vertical = Math.sin(elevation) * distance;
     this.camera.position.set(
-      this.cameraState.target.x + Math.sin(this.cameraState.azimuth) * horizontal,
-      this.cameraState.target.y + vertical,
-      this.cameraState.target.z + Math.cos(this.cameraState.azimuth) * horizontal
+      target.x + Math.sin(azimuth) * horizontal,
+      target.y + vertical,
+      target.z + Math.cos(azimuth) * horizontal
     );
-    this.camera.lookAt(this.cameraState.target);
+    this.camera.lookAt(target);
+  }
+
+  constrainControls() {
+    if (!this.controls) {
+      return;
+    }
+
+    const target = this.controls.target;
+    const nextX = clamp(target.x, this.cameraBounds.minX, this.cameraBounds.maxX);
+    const nextZ = clamp(target.z, this.cameraBounds.minZ, this.cameraBounds.maxZ);
+    const nextY = this.cameraBounds.targetY;
+
+    if (nextX === target.x && nextY === target.y && nextZ === target.z) {
+      return;
+    }
+
+    const delta = this.scratch.vectorC.set(nextX - target.x, nextY - target.y, nextZ - target.z);
+    target.set(nextX, nextY, nextZ);
+    this.camera.position.add(delta);
+    this.camera.updateMatrixWorld();
   }
 
   animate() {
@@ -1241,7 +1192,10 @@ export class JarvisWorldScene {
       orb.position.y += Math.sin(elapsed * 2 + index) * 0.002;
     }
 
-    this.updateCamera(false);
+    if (this.controls) {
+      this.controls.update();
+      this.constrainControls();
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
