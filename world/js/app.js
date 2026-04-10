@@ -1,5 +1,5 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410d";
-import { createDemoState } from "./demo-state.js?v=20260410d";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410f";
+import { createDemoState } from "./demo-state.js?v=20260410f";
 import {
   bindUiElements,
   setGateVisible,
@@ -9,8 +9,8 @@ import {
   renderBridgeStatus,
   renderState,
   showDispatchResult
-} from "./ui.js?v=20260410d";
-import { JarvisWorldScene } from "./world-scene.js?v=20260410d";
+} from "./ui.js?v=20260410f";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410f";
 
 const ui = bindUiElements();
 const appState = {
@@ -21,7 +21,8 @@ const appState = {
   enteredMode: null,
   pollTimer: null,
   lastWorldState: null,
-  deckOpen: false
+  deckOpen: false,
+  selectedAgentId: null
 };
 
 async function loadManifest() {
@@ -100,7 +101,34 @@ function currentMode() {
 function setEnteredMode(mode) {
   appState.enteredMode = mode;
   appState.isAdmin = mode === "admin";
+  if (!appState.isAdmin) {
+    appState.selectedAgentId = null;
+    appState.world?.setSelectedAgent(null);
+  }
   renderMode(ui, currentMode(), Boolean(appState.enteredMode));
+}
+
+function renderWorldState(state) {
+  const availableAgentIds = new Set((state.agents || []).map((agent) => agent.id));
+  if (appState.selectedAgentId && !availableAgentIds.has(appState.selectedAgentId)) {
+    appState.selectedAgentId = null;
+  }
+  renderState(ui, state, appState.isAdmin, {
+    selectedAgentId: appState.selectedAgentId,
+    manifest: appState.manifest
+  });
+  appState.world?.setState(state, appState.isAdmin);
+  appState.world?.setSelectedAgent(appState.isAdmin ? appState.selectedAgentId : null);
+}
+
+function focusAgent(agentId) {
+  if (!appState.isAdmin || !appState.lastWorldState) {
+    return;
+  }
+  appState.selectedAgentId = agentId;
+  appState.deckOpen = true;
+  setDeckOpen(ui, true);
+  renderWorldState(appState.lastWorldState);
 }
 
 function startPolling() {
@@ -118,8 +146,7 @@ async function refreshState() {
     const demo = createDemoState(appState.manifest, currentMode());
     appState.lastWorldState = demo;
     renderBridgeStatus(ui, "No public bridge was reachable. The village is running in safe demo mode.", false, demo);
-    renderState(ui, demo, appState.isAdmin);
-    appState.world?.setState(demo, appState.isAdmin);
+    renderWorldState(demo);
     return;
   }
 
@@ -132,8 +159,7 @@ async function refreshState() {
       Boolean(payload.state.system.healthy),
       payload.state
     );
-    renderState(ui, payload.state, appState.isAdmin);
-    appState.world?.setState(payload.state, appState.isAdmin);
+    renderWorldState(payload.state);
   } catch (error) {
     if (appState.isAdmin && error.message.includes("Admin login required")) {
       setEnteredMode(null);
@@ -147,8 +173,7 @@ async function refreshState() {
           Boolean(payload.state.system.healthy),
           payload.state
         );
-        renderState(ui, payload.state, false);
-        appState.world?.setState(payload.state, false);
+        renderWorldState(payload.state);
         return;
       } catch {
         // Fall through to demo state if even guest mode fails.
@@ -166,8 +191,7 @@ async function refreshState() {
           Boolean(payload.state.system.healthy),
           payload.state
         );
-        renderState(ui, payload.state, appState.isAdmin);
-        appState.world?.setState(payload.state, appState.isAdmin);
+        renderWorldState(payload.state);
         return;
       } catch {
         // Fall through to demo state.
@@ -177,8 +201,7 @@ async function refreshState() {
     const demo = createDemoState(appState.manifest, currentMode());
     appState.lastWorldState = demo;
     renderBridgeStatus(ui, `${error.message}. Falling back to guest-safe demo mode.`, false, demo);
-    renderState(ui, demo, appState.isAdmin);
-    appState.world?.setState(demo, appState.isAdmin);
+    renderWorldState(demo);
   }
 }
 
@@ -193,9 +216,8 @@ async function attemptAdminRestore() {
       Boolean(payload.state.system.healthy),
       payload.state
     );
-    renderState(ui, payload.state, true);
     appState.lastWorldState = payload.state;
-    appState.world?.setState(payload.state, true);
+    renderWorldState(payload.state);
     return true;
   } catch {
     return false;
@@ -211,6 +233,17 @@ function wireUi() {
   ui.deckClose.addEventListener("click", () => {
     appState.deckOpen = false;
     setDeckOpen(ui, false);
+  });
+
+  ui.agentCards.addEventListener("click", (event) => {
+    if (!appState.isAdmin) {
+      return;
+    }
+    const card = event.target.closest("[data-agent-id]");
+    if (!card) {
+      return;
+    }
+    focusAgent(card.dataset.agentId);
   });
 
   ui.modeChip.addEventListener("click", () => {
@@ -277,7 +310,9 @@ async function bootstrap() {
   appState.bridgeConfig = await loadBridgeConfig();
   await resolveWorkingBridge();
 
-  appState.world = new JarvisWorldScene(document.getElementById("world-stage"));
+  appState.world = new JarvisWorldScene(document.getElementById("world-stage"), {
+    onAgentSelect: focusAgent
+  });
   await appState.world.init(appState.manifest);
 
   wireUi();

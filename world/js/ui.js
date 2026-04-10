@@ -24,6 +24,13 @@ function statusLabel(status) {
   return status ? status[0].toUpperCase() + status.slice(1) : "Unknown";
 }
 
+function formatTarget(value) {
+  if (!value) {
+    return "None";
+  }
+  return String(value).replaceAll("-", " ");
+}
+
 function cardMarkup(title, body, meta = "", badge = "") {
   return `
     <article class="list-card">
@@ -53,6 +60,8 @@ export function bindUiElements() {
     bridgeStatusPill: document.getElementById("bridge-status-pill"),
     activityPill: document.getElementById("activity-pill"),
     systemSummary: document.getElementById("system-summary"),
+    selectedAgentSection: document.getElementById("selected-agent-section"),
+    selectedAgentCard: document.getElementById("selected-agent-card"),
     agentCountLabel: document.getElementById("agent-count-label"),
     agentCards: document.getElementById("agent-cards"),
     taskList: document.getElementById("task-list"),
@@ -93,6 +102,7 @@ export function renderMode(ui, mode, hasEntered) {
     ui.guestCommand.classList.add("hidden");
     ui.dispatchForm.classList.remove("hidden");
     ui.deckAdminRow.classList.remove("hidden");
+    ui.selectedAgentSection.classList.remove("hidden");
   } else {
     ui.modeLabel.textContent = hasEntered ? "Guest world" : "Access gate";
     ui.commandTitle.textContent = hasEntered ? "Guest observatory" : "Access gate";
@@ -100,6 +110,7 @@ export function renderMode(ui, mode, hasEntered) {
     ui.guestCommand.classList.remove("hidden");
     ui.dispatchForm.classList.add("hidden");
     ui.deckAdminRow.classList.add("hidden");
+    ui.selectedAgentSection.classList.add("hidden");
   }
 
   ui.commandShell.classList.toggle("hidden", !hasEntered);
@@ -108,23 +119,30 @@ export function renderMode(ui, mode, hasEntered) {
 export function renderBridgeStatus(ui, message, isHealthy, state) {
   ui.bridgeStatusPill.textContent = isHealthy ? "Bridge live" : "Bridge offline";
   ui.activityPill.textContent = state
-    ? `${state.system.activeAgents} active • ${state.system.taskCount} tracked`
+    ? `${state.system.activeAgents} active | ${state.system.taskCount} tracked`
     : "No live activity yet";
   ui.systemSummary.textContent = message;
 }
 
-export function renderState(ui, state, isAdmin) {
+export function renderState(ui, state, isAdmin, options = {}) {
+  const selectedAgentId = options.selectedAgentId || null;
+  const manifest = options.manifest || {};
   ui.agentCountLabel.textContent = `${state.agents.length} tracked`;
 
   ui.agentCards.innerHTML = (state.agents || [])
     .map((agent) => {
       const label = isAdmin ? agent.currentAction.adminLabel : agent.currentAction.publicLabel;
-      return cardMarkup(
-        `${agent.name} • ${statusLabel(agent.status)}`,
-        label || agent.role,
-        `Updated ${formatTime(agent.lastUpdatedAt)}`,
-        agent.role
-      );
+      const selectedClass = agent.id === selectedAgentId ? " is-selected" : "";
+      return `
+        <article class="list-card${selectedClass}" data-agent-id="${escapeHtml(agent.id)}">
+          <div class="card-topline">
+            <h4>${escapeHtml(`${agent.name} - ${statusLabel(agent.status)}`)}</h4>
+            <span class="badge">${escapeHtml(agent.role)}</span>
+          </div>
+          <p>${escapeHtml(label || agent.role)}</p>
+          <small>${escapeHtml(`Updated ${formatTime(agent.lastUpdatedAt)}`)}</small>
+        </article>
+      `;
     })
     .join("");
 
@@ -134,7 +152,7 @@ export function renderState(ui, state, isAdmin) {
       const timing = task.nextRunAt ? `Next ${formatTime(task.nextRunAt)}` : `Updated ${formatTime(task.updatedAt)}`;
       return cardMarkup(
         label || "Scheduled work",
-        `Owner ${task.ownerAgentId}${task.targetAgentId ? ` → ${task.targetAgentId}` : ""}`,
+        `Owner ${task.ownerAgentId}${task.targetAgentId ? ` -> ${task.targetAgentId}` : ""}`,
         timing,
         task.kind || "task"
       );
@@ -147,6 +165,58 @@ export function renderState(ui, state, isAdmin) {
       return cardMarkup(text || "Village activity", "", formatTime(event.timestamp));
     })
     .join("");
+
+  if (!isAdmin) {
+    ui.selectedAgentCard.innerHTML = '<p class="agent-focus-empty">Unlock admin mode to inspect individual gnomes.</p>';
+    return;
+  }
+
+  const selectedAgent = (state.agents || []).find((agent) => agent.id === selectedAgentId);
+  if (!selectedAgent) {
+    ui.selectedAgentCard.innerHTML = '<p class="agent-focus-empty">Click a gnome to inspect what that agent is doing.</p>';
+    return;
+  }
+
+  const relatedTasks = (state.tasks || [])
+    .filter((task) => task.ownerAgentId === selectedAgent.id || task.targetAgentId === selectedAgent.id)
+    .slice(0, 3)
+    .map((task) => task.adminLabel || task.publicLabel || task.kind);
+  const stationId = manifest?.agents?.[selectedAgent.id]?.stationId || "generated-home";
+  const stationLabel = manifest?.stations?.[stationId]?.label || stationId;
+
+  ui.selectedAgentCard.innerHTML = `
+    <article class="agent-focus-card">
+      <div class="agent-focus-topline">
+        <div>
+          <h4>${escapeHtml(selectedAgent.name)}</h4>
+          <p>${escapeHtml(selectedAgent.role)}</p>
+        </div>
+        <span class="badge">${escapeHtml(statusLabel(selectedAgent.status))}</span>
+      </div>
+      <dl class="agent-focus-grid">
+        <div class="agent-focus-row">
+          <dt>Working on</dt>
+          <dd>${escapeHtml(selectedAgent.currentAction.adminLabel || selectedAgent.currentAction.publicLabel || selectedAgent.role)}</dd>
+        </div>
+        <div class="agent-focus-row">
+          <dt>Station</dt>
+          <dd>${escapeHtml(formatTarget(stationLabel))}</dd>
+        </div>
+        <div class="agent-focus-row">
+          <dt>Target</dt>
+          <dd>${escapeHtml(formatTarget(selectedAgent.targetAgentId || selectedAgent.motionTargetId))}</dd>
+        </div>
+        <div class="agent-focus-row">
+          <dt>Updated</dt>
+          <dd>${escapeHtml(formatTime(selectedAgent.lastUpdatedAt))}</dd>
+        </div>
+        <div class="agent-focus-row">
+          <dt>Related tasks</dt>
+          <dd>${escapeHtml(relatedTasks.length ? relatedTasks.join(" | ") : "No active linked tasks")}</dd>
+        </div>
+      </dl>
+    </article>
+  `;
 }
 
 export function showDispatchResult(ui, text, isError = false) {

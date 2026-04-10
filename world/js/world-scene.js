@@ -102,6 +102,63 @@ function separatePoint(candidate, existingPoints, minimumDistance) {
   return adjusted;
 }
 
+function drawRoundedRect(context, x, y, width, height, radius) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
+}
+
+function createNameTagSprite(text, accent) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 384;
+  canvas.height = 96;
+  const context = canvas.getContext("2d");
+  const accentColor = typeof accent === "string" ? accent : "#76f0ff";
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "rgba(10, 18, 38, 0.78)";
+  context.strokeStyle = "rgba(255, 255, 255, 0.22)";
+  context.lineWidth = 2;
+  drawRoundedRect(context, 10, 14, 364, 68, 30);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = accentColor;
+  context.beginPath();
+  context.arc(42, 48, 10, 0, Math.PI * 2);
+  context.fill();
+
+  context.font = '600 28px "Geist", "Segoe UI", sans-serif';
+  context.textBaseline = "middle";
+  context.fillStyle = "#eef5ff";
+  context.fillText(String(text || "Agent"), 66, 48);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(4.8, 1.2, 1);
+  sprite.renderOrder = 10;
+  return sprite;
+}
+
 function buildLots(agentIds) {
   const lots = new Map();
   const others = agentIds.filter((id) => id !== "main").sort((left, right) => left.localeCompare(right));
@@ -159,11 +216,13 @@ function buildLots(agentIds) {
 }
 
 export class JarvisWorldScene {
-  constructor(container) {
+  constructor(container, options = {}) {
     this.container = container;
+    this.onAgentSelect = typeof options.onAgentSelect === "function" ? options.onAgentSelect : null;
     this.manifest = null;
     this.state = null;
     this.isAdmin = false;
+    this.selectedAgentId = null;
     this.renderer = null;
     this.scene = null;
     this.camera = null;
@@ -176,6 +235,7 @@ export class JarvisWorldScene {
     this.homeGroups = new Map();
     this.pathGroup = null;
     this.taskOrbs = [];
+    this.pickTargets = [];
     this.lotMap = new Map();
     this.villageSignature = "";
     this.worldRadius = 58;
@@ -183,8 +243,11 @@ export class JarvisWorldScene {
       active: false,
       mode: "orbit",
       pointerId: null,
+      startX: 0,
+      startY: 0,
       lastX: 0,
-      lastY: 0
+      lastY: 0,
+      moved: false
     };
     this.cameraState = {
       azimuth: 0.48,
@@ -203,11 +266,13 @@ export class JarvisWorldScene {
       vectorA: new THREE.Vector3(),
       vectorB: new THREE.Vector3(),
       vectorC: new THREE.Vector3(),
+      pointer: new THREE.Vector2(),
       matrix: new THREE.Matrix4(),
       quaternion: new THREE.Quaternion(),
       euler: new THREE.Euler(),
       scale: new THREE.Vector3()
     };
+    this.raycaster = new THREE.Raycaster();
 
     this.handleResize = this.handleResize.bind(this);
     this.handlePointerDown = this.handlePointerDown.bind(this);
@@ -580,8 +645,18 @@ export class JarvisWorldScene {
       if (actor.activity) {
         this.scene.remove(actor.activity);
       }
+      if (actor.label) {
+        this.scene.remove(actor.label);
+        actor.label.material.map?.dispose();
+        actor.label.material.dispose();
+      }
+      if (actor.selection) {
+        this.scene.remove(actor.selection);
+        actor.selection.material.dispose();
+      }
     }
     this.agentActors.clear();
+    this.pickTargets = [];
 
     for (const home of this.homeGroups.values()) {
       this.scene.remove(home);
@@ -607,6 +682,9 @@ export class JarvisWorldScene {
       this.scene.add(actor.shadow);
       this.scene.add(actor.group);
       this.scene.add(actor.activity);
+      this.scene.add(actor.label);
+      this.scene.add(actor.selection);
+      this.pickTargets.push(...actor.pickTargets);
     }
 
     for (const [agentId, lot] of this.lotMap.entries()) {
@@ -616,6 +694,8 @@ export class JarvisWorldScene {
       this.addPathSegment(this.pathGroup, new THREE.Vector3(0, 1.03, -6.8), new THREE.Vector3(lot.quest.x, 1.03, lot.quest.z), 0.82);
       this.addPathSegment(this.pathGroup, new THREE.Vector3(lot.quest.x, 1.03, lot.quest.z), new THREE.Vector3(lot.idle.x, 1.03, lot.idle.z), 0.68);
     }
+
+    this.setSelectedAgent(this.selectedAgentId);
   }
 
   addPathSegment(group, start, end, width) {
@@ -750,6 +830,7 @@ export class JarvisWorldScene {
     const seed = hashString(agent.id);
     const hatColor = Array.isArray(manifestEntry?.palette) ? manifestEntry.palette[1] : ["#dbb066", "#6aa7df", "#d76fae", "#77c783", "#7d69d8"][seed % 5];
     const coatColor = Array.isArray(manifestEntry?.palette) ? manifestEntry.palette[0] : ["#fff3dd", "#f0f4ff", "#e7fff5", "#fff1f6", "#f7ffe6"][seed % 5];
+    const displayName = manifestEntry?.displayName || agent.name || agent.id;
 
     const group = new THREE.Group();
     group.position.copy(lot.idle);
@@ -809,11 +890,38 @@ export class JarvisWorldScene {
     activity.position.set(lot.idle.x, 2.48, lot.idle.z);
     activity.visible = false;
 
+    const label = createNameTagSprite(displayName, hatColor);
+    label.position.set(lot.idle.x, 4.1, lot.idle.z);
+
+    const selection = new THREE.Mesh(
+      this.getGeometry("gnome-selection", () => new THREE.TorusGeometry(0.7, 0.04, 8, 28)),
+      new THREE.MeshBasicMaterial({
+        color: hatColor,
+        transparent: true,
+        opacity: 0.95
+      })
+    );
+    selection.rotation.x = Math.PI / 2;
+    selection.position.set(lot.idle.x, 1.08, lot.idle.z);
+    selection.visible = false;
+
+    const pickTargets = [];
+    group.traverse((child) => {
+      if (!child.isMesh) {
+        return;
+      }
+      child.userData.agentId = agent.id;
+      pickTargets.push(child);
+    });
+
     return {
       id: agent.id,
       group,
       shadow,
       activity,
+      label,
+      selection,
+      pickTargets,
       phase: (seed % 1000) / 1000,
       target: lot.idle.clone()
     };
@@ -887,6 +995,7 @@ export class JarvisWorldScene {
       actor.target.copy(target);
       actor.activity.visible = agent.status === "working";
       actor.activity.material.opacity = agent.status === "offline" ? 0.12 : 0.88;
+      actor.label.material.opacity = agent.status === "offline" ? 0.46 : 0.98;
 
       const glow = home.userData.glow;
       if (glow) {
@@ -897,6 +1006,20 @@ export class JarvisWorldScene {
     }
 
     this.updateTaskOrbs(state.tasks || []);
+    this.setSelectedAgent(this.selectedAgentId);
+  }
+
+  setSelectedAgent(agentId) {
+    this.selectedAgentId = agentId || null;
+    for (const [id, actor] of this.agentActors.entries()) {
+      const isSelected = this.isAdmin && id === this.selectedAgentId;
+      if (actor.selection) {
+        actor.selection.visible = isSelected;
+      }
+      if (actor.label) {
+        actor.label.scale.set(isSelected ? 5.4 : 4.8, isSelected ? 1.34 : 1.2, 1);
+      }
+    }
   }
 
   attachControls() {
@@ -921,8 +1044,11 @@ export class JarvisWorldScene {
     }
     this.pointerState.active = true;
     this.pointerState.pointerId = event.pointerId;
+    this.pointerState.startX = event.clientX;
+    this.pointerState.startY = event.clientY;
     this.pointerState.lastX = event.clientX;
     this.pointerState.lastY = event.clientY;
+    this.pointerState.moved = false;
     this.pointerState.mode = event.pointerType === "touch" ? "orbit" : (event.button === 2 || event.shiftKey ? "pan" : "orbit");
     event.target.setPointerCapture?.(event.pointerId);
   }
@@ -938,6 +1064,9 @@ export class JarvisWorldScene {
     const dy = (event.clientY - this.pointerState.lastY) / height;
     this.pointerState.lastX = event.clientX;
     this.pointerState.lastY = event.clientY;
+    if (Math.abs(event.clientX - this.pointerState.startX) + Math.abs(event.clientY - this.pointerState.startY) > 6) {
+      this.pointerState.moved = true;
+    }
 
     if (this.pointerState.mode === "pan") {
       const panScale = this.cameraGoal.distance * 0.045;
@@ -957,8 +1086,12 @@ export class JarvisWorldScene {
     if (event.pointerId !== this.pointerState.pointerId) {
       return;
     }
+    const shouldPick = this.pointerState.mode === "orbit" && !this.pointerState.moved;
     this.pointerState.active = false;
     this.pointerState.pointerId = null;
+    if (shouldPick) {
+      this.pickAgentAt(event.clientX, event.clientY);
+    }
   }
 
   handleWheel(event) {
@@ -1027,6 +1160,24 @@ export class JarvisWorldScene {
     event.preventDefault();
   }
 
+  pickAgentAt(clientX, clientY) {
+    if (!this.isAdmin || !this.onAgentSelect || !this.renderer || !this.camera || this.pickTargets.length === 0) {
+      return;
+    }
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const pointer = this.scratch.pointer;
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -(((clientY - rect.top) / rect.height) * 2 - 1);
+
+    this.raycaster.setFromCamera(pointer, this.camera);
+    const hit = this.raycaster.intersectObjects(this.pickTargets, false)[0];
+    const agentId = hit?.object?.userData?.agentId;
+    if (agentId) {
+      this.onAgentSelect(agentId);
+    }
+  }
+
   updateCamera(immediate = false) {
     const blend = immediate ? 1 : 0.08;
     this.cameraState.azimuth = THREE.MathUtils.lerp(this.cameraState.azimuth, this.cameraGoal.azimuth, blend);
@@ -1055,11 +1206,18 @@ export class JarvisWorldScene {
       actor.shadow.position.z = actor.group.position.z;
       actor.activity.position.x = actor.group.position.x;
       actor.activity.position.z = actor.group.position.z;
+      actor.label.position.x = actor.group.position.x;
+      actor.label.position.z = actor.group.position.z;
+      actor.selection.position.x = actor.group.position.x;
+      actor.selection.position.z = actor.group.position.z;
 
       const bob = Math.sin(elapsed * 2.6 + actor.phase * Math.PI * 2) * 0.08;
       actor.group.position.y = 1.04 + bob;
       actor.activity.position.y = 2.5 + Math.sin(elapsed * 2 + actor.phase * 5) * 0.08;
+      actor.label.position.y = 4.1 + bob * 0.35;
+      actor.selection.position.y = 1.08 + bob * 0.15;
       actor.activity.rotation.z += delta * 1.6;
+      actor.selection.rotation.z -= delta * 0.8;
 
       if (actor.target.distanceToSquared(actor.group.position) > 0.3) {
         const look = this.scratch.vectorA.copy(actor.target);

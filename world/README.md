@@ -23,6 +23,7 @@ Public static frontend for the Jarvis World observatory.
 - Lots are intentionally generated as loose neighborhoods instead of a perfect ring, so the village can sprawl as new subagents appear.
 - The public house kit under `assets/models/kenney-town/` is CC0 art from Kenney.
 - Agent gnomes are procedural for performance and easier future edits.
+- Every gnome gets a live nametag built from public-safe agent metadata.
 - `data/world-manifest.json` is now mostly a source of display names and palettes; the 3D home layout is generated at runtime.
 
 ## Add a new agent later
@@ -41,6 +42,8 @@ Public static frontend for the Jarvis World observatory.
   - right-drag or Shift-drag to pan
   - scroll to zoom
   - `WASD` / arrow keys pan, `Q` / `E` orbit, `R` / `F` zoom
+- Admin interaction:
+  - click any gnome or agent card in admin mode to open its detail view in the control deck
 
 ## Bridge deployment
 

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css?v=20260410d">
+    <link rel="stylesheet" href="./styles.css?v=20260410f">
   </head>
   <body>
     <main class="app-shell">
@@ -41,6 +41,14 @@
             <span class="status-pill" id="bridge-status-pill">Bridge unknown</span>
             <span class="status-pill" id="activity-pill">No live activity yet</span>
           </div>
+        </section>
+
+        <section class="deck-section hidden" id="selected-agent-section">
+          <div class="section-row">
+            <h3>Selected Agent</h3>
+            <small>Click a gnome in admin mode</small>
+          </div>
+          <div id="selected-agent-card"></div>
         </section>
 
         <section class="deck-section">
@@ -128,7 +136,7 @@
         }
       }
     </script>
-    <script src="./config.js?v=20260410d"></script>
-    <script type="module" src="./js/app.js?v=20260410d"></script>
+    <script src="./config.js?v=20260410f"></script>
+    <script type="module" src="./js/app.js?v=20260410f"></script>
   </body>
 </html>
