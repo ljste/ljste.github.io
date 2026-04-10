@@ -21,7 +21,7 @@ async function request(pathname, options = {}) {
   let response;
   try {
     response = await fetch(buildUrl(pathname), {
-      credentials: "include",
+      credentials: options.credentials || "omit",
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -41,16 +41,21 @@ async function request(pathname, options = {}) {
 }
 
 export async function fetchPublicState() {
-  return request("/world-api/public/state");
+  return request("/world-api/public/state", {
+    credentials: "omit"
+  });
 }
 
 export async function fetchAdminState() {
-  return request("/world-api/admin/state");
+  return request("/world-api/admin/state", {
+    credentials: "include"
+  });
 }
 
 export async function login(password) {
   return request("/world-api/admin/login", {
     method: "POST",
+    credentials: "include",
     body: JSON.stringify({ password })
   });
 }
@@ -58,6 +63,7 @@ export async function login(password) {
 export async function logout() {
   return request("/world-api/admin/logout", {
     method: "POST",
+    credentials: "include",
     body: JSON.stringify({})
   });
 }
@@ -65,6 +71,7 @@ export async function logout() {
 export async function dispatch(message) {
   return request("/world-api/admin/dispatch", {
     method: "POST",
+    credentials: "include",
     body: JSON.stringify({ message })
   });
 }

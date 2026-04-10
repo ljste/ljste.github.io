@@ -1,7 +1,7 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js";
-import { createDemoState } from "./demo-state.js";
-import { bindUiElements, renderBridgePanel, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js";
-import { JarvisWorldScene } from "./world-scene.js";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase } from "./api.js?v=20260410a";
+import { createDemoState } from "./demo-state.js?v=20260410a";
+import { bindUiElements, renderBridgePanel, renderBridgeStatus, renderMode, renderState, showDispatchResult } from "./ui.js?v=20260410a";
+import { JarvisWorldScene } from "./world-scene.js?v=20260410a";
 
 const ui = bindUiElements();
 const appState = {
