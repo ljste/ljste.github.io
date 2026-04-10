@@ -6,6 +6,17 @@ function lighten(hex, amount = 28) {
   return `#${(red << 16 | green << 8 | blue).toString(16).padStart(6, "0")}`;
 }
 
+function truncateLabel(value, maxLength = 36) {
+  const text = String(value || "").trim();
+  if (text.length <= maxLength) {
+    return text;
+  }
+  if (maxLength <= 3) {
+    return text.slice(0, maxLength);
+  }
+  return `${text.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
 export class JarvisWorldScene extends Phaser.Scene {
   constructor() {
     super("JarvisWorldScene");
@@ -200,7 +211,7 @@ export class JarvisWorldScene extends Phaser.Scene {
         ? (agent.currentAction?.adminLabel || agent.name)
         : (agent.currentAction?.publicLabel || agent.name);
 
-      label.setText(`${agent.name}\n${Phaser.Utils.String.Ellipsis(actionText, 36)}`);
+      label.setText(`${agent.name}\n${truncateLabel(actionText, 36)}`);
       this.tweens.add({
         targets: label,
         x: target.x,
