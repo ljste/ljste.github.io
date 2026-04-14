@@ -171,7 +171,7 @@ export function renderBridgeStatus(ui, message, isHealthy, state) {
   ui.activityPill.textContent = state
     ? `${state.system.activeAgents} active | ${state.system.taskCount} tracked`
     : "No live activity yet";
-  ui.systemSummary.textContent = message;
+
 }
 
 export function renderState(ui, state, isAdmin, options = {}) {
