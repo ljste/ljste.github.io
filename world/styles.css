@@ -296,7 +296,6 @@ input {
 .agent-focus-grid {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
 }
 
 .agent-focus-row {
@@ -320,6 +319,71 @@ input {
 .agent-focus-empty {
   color: var(--ink-soft);
   margin: 10px 0 0;
+}
+
+.agent-focus-stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.agent-callout {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.agent-callout strong {
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.timeline-block {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-list {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline-item {
+  display: grid;
+  gap: 7px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.timeline-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(228, 242, 255, 0.64);
+  font-size: 0.8rem;
+}
+
+.timeline-body {
+  display: grid;
+  gap: 4px;
+}
+
+.timeline-body strong {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.timeline-body small {
+  color: var(--ink-soft);
+  line-height: 1.4;
 }
 
 .command-shell {

@@ -21,7 +21,31 @@ function escapeHtml(value) {
 }
 
 function statusLabel(status) {
-  return status ? status[0].toUpperCase() + status.slice(1) : "Unknown";
+  if (!status) {
+    return "Unknown";
+  }
+  const normalized = String(status).replaceAll("_", " ");
+  return normalized[0].toUpperCase() + normalized.slice(1);
+}
+
+function stageLabel(stage, fallbackStatus = "") {
+  const value = String(stage || "").toLowerCase();
+  if (value === "idle_patrol") {
+    return "Patrolling";
+  }
+  if (value === "commuting") {
+    return "Commuting";
+  }
+  if (value === "working") {
+    return "Working";
+  }
+  if (value === "returning") {
+    return "Returning";
+  }
+  if (value === "offline") {
+    return "Offline";
+  }
+  return statusLabel(fallbackStatus);
 }
 
 function formatTarget(value) {
@@ -44,6 +68,29 @@ function cardMarkup(title, body, meta = "", badge = "") {
   `;
 }
 
+function timelineMarkup(items = [], isAdmin = false) {
+  if (!items.length) {
+    return '<p class="agent-focus-empty">No recent work history yet.</p>';
+  }
+
+  return `
+    <ol class="timeline-list">
+      ${items.map((item) => `
+        <li class="timeline-item">
+          <div class="timeline-meta">
+            <span>${escapeHtml(formatTime(item.timestamp))}</span>
+            <span>${escapeHtml(stageLabel(item.status, item.status))}</span>
+          </div>
+          <div class="timeline-body">
+            <strong>${escapeHtml(isAdmin ? (item.adminLabel || item.publicLabel) : item.publicLabel)}</strong>
+            ${isAdmin && item.partnerAgentId ? `<small>Partner ${escapeHtml(item.partnerAgentId)}</small>` : ""}
+          </div>
+        </li>
+      `).join("")}
+    </ol>
+  `;
+}
+
 export function bindUiElements() {
   return {
     gateOverlay: document.getElementById("gate-overlay"),
@@ -62,6 +109,7 @@ export function bindUiElements() {
     systemSummary: document.getElementById("system-summary"),
     selectedAgentSection: document.getElementById("selected-agent-section"),
     selectedAgentCard: document.getElementById("selected-agent-card"),
+    selectedAgentHint: document.getElementById("selected-agent-hint"),
     agentCountLabel: document.getElementById("agent-count-label"),
     agentCards: document.getElementById("agent-cards"),
     taskList: document.getElementById("task-list"),
@@ -102,7 +150,8 @@ export function renderMode(ui, mode, hasEntered) {
     ui.guestCommand.classList.add("hidden");
     ui.dispatchForm.classList.remove("hidden");
     ui.deckAdminRow.classList.remove("hidden");
-    ui.selectedAgentSection.classList.remove("hidden");
+    ui.selectedAgentSection.classList.toggle("hidden", !hasEntered);
+    ui.selectedAgentHint.textContent = "Click any gnome for the full internal timeline.";
   } else {
     ui.modeLabel.textContent = hasEntered ? "Guest world" : "Access gate";
     ui.commandTitle.textContent = hasEntered ? "Guest observatory" : "Access gate";
@@ -110,7 +159,8 @@ export function renderMode(ui, mode, hasEntered) {
     ui.guestCommand.classList.remove("hidden");
     ui.dispatchForm.classList.add("hidden");
     ui.deckAdminRow.classList.add("hidden");
-    ui.selectedAgentSection.classList.add("hidden");
+    ui.selectedAgentSection.classList.toggle("hidden", !hasEntered);
+    ui.selectedAgentHint.textContent = "Click any gnome for a public-safe recent timeline.";
   }
 
   ui.commandShell.classList.toggle("hidden", !hasEntered);
@@ -131,16 +181,18 @@ export function renderState(ui, state, isAdmin, options = {}) {
 
   ui.agentCards.innerHTML = (state.agents || [])
     .map((agent) => {
-      const label = isAdmin ? agent.currentAction.adminLabel : agent.currentAction.publicLabel;
+      const label = isAdmin
+        ? (agent.currentAction.adminLabel || agent.currentAction.publicLabel)
+        : agent.currentAction.publicLabel;
       const selectedClass = agent.id === selectedAgentId ? " is-selected" : "";
       return `
         <article class="list-card${selectedClass}" data-agent-id="${escapeHtml(agent.id)}">
           <div class="card-topline">
-            <h4>${escapeHtml(`${agent.name} - ${statusLabel(agent.status)}`)}</h4>
-            <span class="badge">${escapeHtml(agent.role)}</span>
+            <h4>${escapeHtml(agent.name)}</h4>
+            <span class="badge">${escapeHtml(stageLabel(agent.activityStage, agent.status))}</span>
           </div>
           <p>${escapeHtml(label || agent.role)}</p>
-          <small>${escapeHtml(`Updated ${formatTime(agent.lastUpdatedAt)}`)}</small>
+          <small>${escapeHtml(`${agent.role} | Updated ${formatTime(agent.lastUpdatedAt)}`)}</small>
         </article>
       `;
     })
@@ -148,10 +200,12 @@ export function renderState(ui, state, isAdmin, options = {}) {
 
   ui.taskList.innerHTML = (state.tasks || [])
     .map((task) => {
-      const label = isAdmin ? task.adminLabel : task.publicLabel;
-      const timing = task.nextRunAt ? `Next ${formatTime(task.nextRunAt)}` : `Updated ${formatTime(task.updatedAt)}`;
+      const label = isAdmin ? (task.adminLabel || task.publicLabel) : task.publicLabel;
+      const timing = task.nextRunAt
+        ? `Next ${formatTime(task.nextRunAt)}`
+        : `Updated ${formatTime(task.updatedAt)}`;
       return cardMarkup(
-        label || "Scheduled work",
+        label || "Tracked work",
         `Owner ${task.ownerAgentId}${task.targetAgentId ? ` -> ${task.targetAgentId}` : ""}`,
         timing,
         task.kind || "task"
@@ -161,28 +215,27 @@ export function renderState(ui, state, isAdmin, options = {}) {
 
   ui.eventList.innerHTML = (state.events || [])
     .map((event) => {
-      const text = isAdmin ? event.adminText : event.publicText;
+      const text = isAdmin ? (event.adminText || event.publicText) : event.publicText;
       return cardMarkup(text || "Village activity", "", formatTime(event.timestamp));
     })
     .join("");
 
-  if (!isAdmin) {
-    ui.selectedAgentCard.innerHTML = '<p class="agent-focus-empty">Unlock admin mode to inspect individual gnomes.</p>';
-    return;
-  }
-
   const selectedAgent = (state.agents || []).find((agent) => agent.id === selectedAgentId);
   if (!selectedAgent) {
-    ui.selectedAgentCard.innerHTML = '<p class="agent-focus-empty">Click a gnome to inspect what that agent is doing.</p>';
+    ui.selectedAgentCard.innerHTML = '<p class="agent-focus-empty">Click a gnome to inspect its recent activity.</p>';
     return;
   }
 
-  const relatedTasks = (state.tasks || [])
-    .filter((task) => task.ownerAgentId === selectedAgent.id || task.targetAgentId === selectedAgent.id)
-    .slice(0, 3)
-    .map((task) => task.adminLabel || task.publicLabel || task.kind);
-  const stationId = manifest?.agents?.[selectedAgent.id]?.stationId || "generated-home";
+  const stationId = manifest?.agents?.[selectedAgent.id]?.stationId || selectedAgent.stationId || "generated-home";
   const stationLabel = manifest?.stations?.[stationId]?.label || stationId;
+  const currentLabel = isAdmin
+    ? (selectedAgent.currentAction.adminLabel || selectedAgent.currentAction.publicLabel || selectedAgent.role)
+    : (selectedAgent.currentAction.publicLabel || selectedAgent.role);
+  const nextDuty = selectedAgent.nextDuty
+    ? `${isAdmin ? (selectedAgent.nextDuty.adminLabel || selectedAgent.nextDuty.publicLabel) : selectedAgent.nextDuty.publicLabel} (${formatTime(selectedAgent.nextDuty.nextRunAt)})`
+    : "None scheduled";
+  const snippet = isAdmin && selectedAgent.latestSnippet ? selectedAgent.latestSnippet : "";
+  const history = selectedAgent.history || [];
 
   ui.selectedAgentCard.innerHTML = `
     <article class="agent-focus-card">
@@ -191,30 +244,52 @@ export function renderState(ui, state, isAdmin, options = {}) {
           <h4>${escapeHtml(selectedAgent.name)}</h4>
           <p>${escapeHtml(selectedAgent.role)}</p>
         </div>
-        <span class="badge">${escapeHtml(statusLabel(selectedAgent.status))}</span>
+        <span class="badge">${escapeHtml(stageLabel(selectedAgent.activityStage, selectedAgent.status))}</span>
       </div>
-      <dl class="agent-focus-grid">
-        <div class="agent-focus-row">
-          <dt>Working on</dt>
-          <dd>${escapeHtml(selectedAgent.currentAction.adminLabel || selectedAgent.currentAction.publicLabel || selectedAgent.role)}</dd>
+
+      <div class="agent-focus-stack">
+        <div class="agent-callout">
+          <span class="eyebrow">Current</span>
+          <strong>${escapeHtml(currentLabel)}</strong>
         </div>
-        <div class="agent-focus-row">
-          <dt>Station</dt>
-          <dd>${escapeHtml(formatTarget(stationLabel))}</dd>
+
+        <dl class="agent-focus-grid">
+          <div class="agent-focus-row">
+            <dt>Stage</dt>
+            <dd>${escapeHtml(stageLabel(selectedAgent.activityStage, selectedAgent.status))}</dd>
+          </div>
+          <div class="agent-focus-row">
+            <dt>Station</dt>
+            <dd>${escapeHtml(formatTarget(stationLabel))}</dd>
+          </div>
+          <div class="agent-focus-row">
+            <dt>Partner</dt>
+            <dd>${escapeHtml(formatTarget(selectedAgent.partnerAgentId))}</dd>
+          </div>
+          <div class="agent-focus-row">
+            <dt>Next duty</dt>
+            <dd>${escapeHtml(nextDuty)}</dd>
+          </div>
+          <div class="agent-focus-row">
+            <dt>Updated</dt>
+            <dd>${escapeHtml(formatTime(selectedAgent.lastUpdatedAt))}</dd>
+          </div>
+          ${snippet ? `
+            <div class="agent-focus-row">
+              <dt>Snippet</dt>
+              <dd>${escapeHtml(snippet)}</dd>
+            </div>
+          ` : ""}
+        </dl>
+
+        <div class="timeline-block">
+          <div class="section-row">
+            <h3>Recent timeline</h3>
+            <small>${escapeHtml(isAdmin ? "Internal recent work log" : "Public-safe recent work log")}</small>
+          </div>
+          ${timelineMarkup(history, isAdmin)}
         </div>
-        <div class="agent-focus-row">
-          <dt>Target</dt>
-          <dd>${escapeHtml(formatTarget(selectedAgent.targetAgentId || selectedAgent.motionTargetId))}</dd>
-        </div>
-        <div class="agent-focus-row">
-          <dt>Updated</dt>
-          <dd>${escapeHtml(formatTime(selectedAgent.lastUpdatedAt))}</dd>
-        </div>
-        <div class="agent-focus-row">
-          <dt>Related tasks</dt>
-          <dd>${escapeHtml(relatedTasks.length ? relatedTasks.join(" | ") : "No active linked tasks")}</dd>
-        </div>
-      </dl>
+      </div>
     </article>
   `;
 }

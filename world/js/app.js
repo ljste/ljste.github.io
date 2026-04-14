@@ -1,5 +1,5 @@
-import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase, clearStoredApiBase, clearAdminToken } from "./api.js?v=20260410m";
-import { createDemoState } from "./demo-state.js?v=20260410m";
+import { fetchAdminState, fetchPublicState, login, logout, dispatch, getApiBase, setStoredApiBase, clearStoredApiBase, clearAdminToken } from "./api.js?v=20260414a";
+import { createDemoState } from "./demo-state.js?v=20260414a";
 import {
   bindUiElements,
   setGateVisible,
@@ -9,8 +9,8 @@ import {
   renderBridgeStatus,
   renderState,
   showDispatchResult
-} from "./ui.js?v=20260410m";
-import { JarvisWorldScene } from "./world-scene.js?v=20260410m";
+} from "./ui.js?v=20260414a";
+import { JarvisWorldScene } from "./world-scene.js?v=20260414a";
 
 const ui = bindUiElements();
 const appState = {
@@ -103,10 +103,6 @@ function currentMode() {
 function setEnteredMode(mode) {
   appState.enteredMode = mode;
   appState.isAdmin = mode === "admin";
-  if (!appState.isAdmin) {
-    appState.selectedAgentId = null;
-    appState.world?.setSelectedAgent(null);
-  }
   renderMode(ui, currentMode(), Boolean(appState.enteredMode));
 }
 
@@ -120,11 +116,11 @@ function renderWorldState(state) {
     manifest: appState.manifest
   });
   appState.world?.setState(state, appState.isAdmin);
-  appState.world?.setSelectedAgent(appState.isAdmin ? appState.selectedAgentId : null);
+  appState.world?.setSelectedAgent(appState.selectedAgentId);
 }
 
 function focusAgent(agentId) {
-  if (!appState.isAdmin || !appState.lastWorldState) {
+  if (!appState.lastWorldState) {
     return;
   }
   appState.selectedAgentId = agentId;
@@ -239,9 +235,6 @@ function wireUi() {
   });
 
   ui.agentCards.addEventListener("click", (event) => {
-    if (!appState.isAdmin) {
-      return;
-    }
     const card = event.target.closest("[data-agent-id]");
     if (!card) {
       return;

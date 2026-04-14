@@ -13,6 +13,21 @@ const HOUSE_ASSETS = [
   "lantern.glb"
 ];
 
+const ACTIVE_TASK_STATUSES = new Set(["running", "active", "waiting_approval", "waiting_capacity"]);
+
+function stageFromStatus(status) {
+  if (status === "offline") {
+    return "offline";
+  }
+  if (status === "working") {
+    return "working";
+  }
+  if (status === "moving") {
+    return "commuting";
+  }
+  return "idle_patrol";
+}
+
 function hashString(value) {
   let hash = 2166136261;
   for (const char of String(value || "")) {
@@ -927,6 +942,8 @@ export class JarvisWorldScene {
       pickTargets.push(child);
     });
 
+    const patrolRoute = this.buildPatrolRoute(agent.id, lot, seed);
+
     return {
       id: agent.id,
       group,
@@ -936,8 +953,138 @@ export class JarvisWorldScene {
       selection,
       pickTargets,
       phase: (seed % 1000) / 1000,
-      target: lot.idle.clone()
+      target: lot.idle.clone(),
+      stage: "idle_patrol",
+      stateKey: "",
+      patrolRoute,
+      patrolIndex: 0,
+      waitUntil: 0
     };
+  }
+
+  buildPatrolRoute(agentId, lot, seed) {
+    const wanderA = lot.idle.clone().lerp(lot.quest, 0.35);
+    const wanderB = lot.quest.clone().lerp(this.centerWorkTarget, agentId === "main" ? 0.28 : 0.42);
+    const swayX = ((((seed >> 6) % 1000) / 1000) - 0.5) * (agentId === "main" ? 3.2 : 2.4);
+    const swayZ = ((((seed >> 16) % 1000) / 1000) - 0.5) * (agentId === "main" ? 2.4 : 1.8);
+
+    wanderA.x += swayX;
+    wanderA.z += swayZ;
+    wanderB.x -= swayX * 0.4;
+    wanderB.z += swayZ * 0.3;
+    wanderA.y = 0;
+    wanderB.y = 0;
+
+    if (agentId === "main") {
+      return [
+        lot.idle.clone(),
+        lot.work.clone(),
+        lot.quest.clone(),
+        wanderB
+      ];
+    }
+
+    return [
+      lot.idle.clone(),
+      wanderA,
+      lot.quest.clone(),
+      wanderB
+    ];
+  }
+
+  resolveMotionTarget(agent, lot) {
+    if (!agent?.motionTargetId) {
+      return lot.quest.clone();
+    }
+    if (agent.motionTargetId === "quest-board") {
+      return this.centerWorkTarget.clone();
+    }
+    if (agent.motionTargetId === agent.id || agent.motionTargetId === agent.stationId) {
+      return lot.idle.clone();
+    }
+    if (this.lotMap.has(agent.motionTargetId)) {
+      return this.lotMap.get(agent.motionTargetId).quest.clone();
+    }
+    return lot.quest.clone();
+  }
+
+  resolveStageTarget(agent, actor, lot) {
+    const stage = agent.activityStage || stageFromStatus(agent.status);
+    const partnerId = agent.partnerAgentId || agent.targetAgentId || null;
+
+    if (stage === "offline") {
+      return lot.idle.clone();
+    }
+
+    if (stage === "idle_patrol") {
+      return actor.patrolRoute[actor.patrolIndex % actor.patrolRoute.length].clone();
+    }
+
+    if (stage === "returning") {
+      return lot.idle.clone();
+    }
+
+    if (stage === "working") {
+      if (agent.id === "main" && partnerId && this.lotMap.has(partnerId)) {
+        return this.lotMap.get(partnerId).quest.clone().lerp(lot.work, 0.38);
+      }
+      if (agent.motionTargetId === "quest-board") {
+        return this.centerWorkTarget.clone();
+      }
+      return lot.work.clone();
+    }
+
+    if (stage === "commuting") {
+      if (agent.id === "main" && partnerId && this.lotMap.has(partnerId)) {
+        return this.lotMap.get(partnerId).quest.clone();
+      }
+      return this.resolveMotionTarget(agent, lot);
+    }
+
+    return lot.idle.clone();
+  }
+
+  syncActorState(agent, actor, lot) {
+    const nextStage = agent.activityStage || stageFromStatus(agent.status);
+    const nextStateKey = [
+      nextStage,
+      agent.motionTargetId || "",
+      agent.partnerAgentId || agent.targetAgentId || "",
+      agent.activityStartedAt || "",
+      agent.lastActiveAt || ""
+    ].join("|");
+    const stateChanged = actor.stateKey !== nextStateKey;
+
+    if (stateChanged) {
+      actor.stateKey = nextStateKey;
+      actor.stage = nextStage;
+      if (nextStage === "idle_patrol") {
+        const routeLength = Math.max(actor.patrolRoute.length, 1);
+        actor.patrolIndex = (actor.patrolIndex + 1) % routeLength;
+        actor.target.copy(actor.patrolRoute[actor.patrolIndex]);
+        actor.waitUntil = this.clock.elapsedTime + 0.8 + actor.phase * 1.5;
+      } else {
+        actor.target.copy(this.resolveStageTarget(agent, actor, lot));
+        actor.waitUntil = this.clock.elapsedTime + (nextStage === "working" ? 1.2 : 0.4);
+      }
+    } else if (nextStage !== "idle_patrol") {
+      actor.target.copy(this.resolveStageTarget(agent, actor, lot));
+    }
+  }
+
+  updateIdlePatrol(actor, elapsed) {
+    if (actor.stage !== "idle_patrol" || actor.patrolRoute.length === 0) {
+      return;
+    }
+
+    const closeEnough = actor.group.position.distanceToSquared(actor.target) < 0.22;
+    if (!closeEnough || elapsed < actor.waitUntil) {
+      return;
+    }
+
+    actor.patrolIndex = (actor.patrolIndex + 1) % actor.patrolRoute.length;
+    actor.target.copy(actor.patrolRoute[actor.patrolIndex]);
+    actor.waitUntil = elapsed + 1.25 + actor.phase * 1.9;
   }
 
   updateTaskOrbs(tasks) {
@@ -950,7 +1097,7 @@ export class JarvisWorldScene {
       this.scene.add(orb);
     }
 
-    const activeTasks = (tasks || []).filter((task) => task.status === "running").slice(0, 5);
+    const activeTasks = (tasks || []).filter((task) => ACTIVE_TASK_STATUSES.has(task.status)).slice(0, 5);
     this.taskOrbs.forEach((orb, index) => {
       orb.visible = index < activeTasks.length;
       if (!orb.visible) {
@@ -989,30 +1136,23 @@ export class JarvisWorldScene {
         continue;
       }
 
-      let target = lot.idle.clone();
-
-      if (agent.id === "main") {
-        if (agent.status === "moving" && agent.targetAgentId && this.lotMap.has(agent.targetAgentId)) {
-          target = this.lotMap.get(agent.targetAgentId).quest.clone();
-        } else if (agent.status === "working") {
-          target = lot.work.clone();
-        }
-      } else if (agent.status === "working" && agent.motionTargetId === "quest-board") {
-        target = this.centerWorkTarget.clone();
-      } else if (agent.status === "working") {
-        target = lot.work.clone();
-      } else if (agent.status === "moving") {
-        target = lot.quest.clone();
-      }
-
-      actor.target.copy(target);
-      actor.activity.visible = agent.status === "working";
-      actor.activity.material.opacity = agent.status === "offline" ? 0.12 : 0.88;
-      actor.label.material.opacity = agent.status === "offline" ? 0.46 : 0.98;
+      const stage = agent.activityStage || stageFromStatus(agent.status);
+      this.syncActorState(agent, actor, lot);
+      actor.activity.visible = stage === "working" || stage === "commuting" || stage === "returning";
+      actor.activity.material.opacity = stage === "working"
+        ? 0.94
+        : stage === "offline"
+          ? 0.12
+          : 0.52;
+      actor.label.material.opacity = stage === "offline" ? 0.46 : 0.98;
 
       const glow = home.userData.glow;
       if (glow) {
-        glow.material.opacity = agent.status === "working" ? 0.44 : agent.status === "moving" ? 0.3 : 0.16;
+        glow.material.opacity = stage === "working"
+          ? 0.44
+          : stage === "commuting" || stage === "returning"
+            ? 0.28
+            : 0.16;
       }
       home.position.copy(lot.house);
       home.rotation.y = lot.heading;
@@ -1025,7 +1165,7 @@ export class JarvisWorldScene {
   setSelectedAgent(agentId) {
     this.selectedAgentId = agentId || null;
     for (const [id, actor] of this.agentActors.entries()) {
-      const isSelected = this.isAdmin && id === this.selectedAgentId;
+      const isSelected = id === this.selectedAgentId;
       if (actor.selection) {
         actor.selection.visible = isSelected;
       }
@@ -1247,7 +1387,7 @@ export class JarvisWorldScene {
   }
 
   pickAgentAt(clientX, clientY) {
-    if (!this.isAdmin || !this.onAgentSelect || !this.renderer || !this.camera || this.pickTargets.length === 0) {
+    if (!this.onAgentSelect || !this.renderer || !this.camera || this.pickTargets.length === 0) {
       return;
     }
 
@@ -1302,7 +1442,17 @@ export class JarvisWorldScene {
     const elapsed = this.clock.elapsedTime;
 
     for (const actor of this.agentActors.values()) {
-      actor.group.position.lerp(actor.target, clamp(delta * 2.6, 0.04, 0.13));
+      this.updateIdlePatrol(actor, elapsed);
+
+      const moveFactor = actor.stage === "working"
+        ? clamp(delta * 2.05, 0.03, 0.09)
+        : actor.stage === "commuting"
+          ? clamp(delta * 3.25, 0.05, 0.16)
+          : actor.stage === "returning"
+            ? clamp(delta * 2.85, 0.05, 0.14)
+            : clamp(delta * 1.95, 0.03, 0.08);
+
+      actor.group.position.lerp(actor.target, moveFactor);
       actor.shadow.position.x = actor.group.position.x;
       actor.shadow.position.z = actor.group.position.z;
       actor.activity.position.x = actor.group.position.x;
@@ -1312,15 +1462,17 @@ export class JarvisWorldScene {
       actor.selection.position.x = actor.group.position.x;
       actor.selection.position.z = actor.group.position.z;
 
-      const bob = Math.sin(elapsed * 2.6 + actor.phase * Math.PI * 2) * 0.08;
+      const bobAmplitude = actor.stage === "working" ? 0.11 : actor.stage === "offline" ? 0.03 : 0.08;
+      const bobSpeed = actor.stage === "commuting" ? 3.2 : actor.stage === "working" ? 2.2 : 2.6;
+      const bob = Math.sin(elapsed * bobSpeed + actor.phase * Math.PI * 2) * bobAmplitude;
       actor.group.position.y = 1.04 + bob;
-      actor.activity.position.y = 2.5 + Math.sin(elapsed * 2 + actor.phase * 5) * 0.08;
+      actor.activity.position.y = 2.5 + Math.sin(elapsed * 2 + actor.phase * 5) * (actor.stage === "working" ? 0.12 : 0.08);
       actor.label.position.y = 4.1 + bob * 0.35;
       actor.selection.position.y = 1.08 + bob * 0.15;
-      actor.activity.rotation.z += delta * 1.6;
+      actor.activity.rotation.z += delta * (actor.stage === "working" ? 1.9 : 1.2);
       actor.selection.rotation.z -= delta * 0.8;
 
-      if (actor.target.distanceToSquared(actor.group.position) > 0.3) {
+      if (actor.target.distanceToSquared(actor.group.position) > 0.16) {
         const look = this.scratch.vectorA.copy(actor.target);
         look.y = actor.group.position.y;
         actor.group.lookAt(look);
