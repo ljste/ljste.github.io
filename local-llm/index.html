@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Local LLM</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080a0d;
+      --panel: #10141a;
+      --text: #e9eef5;
+      --muted: #96a1af;
+      --accent: #52d273;
+      --border: #26303b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    main {
+      width: min(100%, 480px);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 22px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    a,
+    button {
+      width: 100%;
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--accent);
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button {
+      margin-top: 10px;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Local LLM</h1>
+    <p id="status">Finding the current tunnel...</p>
+    <a id="open" href="#" rel="noreferrer" hidden>Open current tunnel</a>
+    <button id="retry" type="button" hidden>Retry</button>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const openEl = document.getElementById("open");
+    const retryEl = document.getElementById("retry");
+
+    function setFailure(message) {
+      statusEl.textContent = message;
+      openEl.hidden = true;
+      retryEl.hidden = false;
+    }
+
+    async function openCurrentTunnel() {
+      retryEl.hidden = true;
+      openEl.hidden = true;
+      statusEl.textContent = "Finding the current tunnel...";
+
+      try {
+        const response = await fetch(`./target.json?t=${Date.now()}`, {
+          cache: "no-store",
+          headers: { "accept": "application/json" },
+        });
+
+        if (!response.ok) {
+          throw new Error(`target.json returned HTTP ${response.status}`);
+        }
+
+        const target = await response.json();
+        const url = new URL(target.url);
+
+        if (url.protocol !== "https:") {
+          throw new Error("Target must use HTTPS.");
+        }
+
+        statusEl.textContent = target.updatedAt
+          ? `Opening tunnel updated ${new Date(target.updatedAt).toLocaleString()}...`
+          : "Opening current tunnel...";
+        openEl.href = url.href;
+        openEl.hidden = false;
+        window.setTimeout(() => window.location.replace(url.href), 350);
+      } catch (error) {
+        setFailure(`No live tunnel target is published yet. ${error.message}`);
+      }
+    }
+
+    retryEl.addEventListener("click", openCurrentTunnel);
+    openCurrentTunnel();
+  </script>
+</body>
+</html>
