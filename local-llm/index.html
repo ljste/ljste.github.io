@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#080a0d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Local LLM">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
   <title>Local LLM</title>
   <style>
     :root {
@@ -94,6 +99,18 @@
     const retryEl = document.getElementById("retry");
     const rawTargetUrl = "https://raw.githubusercontent.com/ljste/ljste.github.io/main/local-llm/target.json";
     const apiTargetUrl = "https://api.github.com/repos/ljste/ljste.github.io/contents/local-llm/target.json?ref=main";
+    const params = new URLSearchParams(window.location.search);
+    const installMode = params.has("install");
+    const forceOpen = params.has("open");
+
+    function isStandalone() {
+      return window.navigator.standalone === true
+        || window.matchMedia("(display-mode: standalone)").matches;
+    }
+
+    function shouldAutoOpen() {
+      return forceOpen || !installMode || isStandalone();
+    }
 
     function setFailure(message) {
       statusEl.textContent = message;
@@ -144,9 +161,13 @@
     }
 
     async function openCurrentTunnel() {
+      const autoOpen = shouldAutoOpen();
+
       retryEl.hidden = true;
       openEl.hidden = true;
-      statusEl.textContent = "Finding the current tunnel...";
+      statusEl.textContent = installMode && !autoOpen
+        ? "Ready to save. The button below opens the current tunnel."
+        : "Finding the current tunnel...";
 
       try {
         const target = await fetchTarget();
@@ -156,12 +177,19 @@
           throw new Error("Target must use HTTPS.");
         }
 
-        statusEl.textContent = target.updatedAt
-          ? `Opening tunnel updated ${new Date(target.updatedAt).toLocaleString()}...`
-          : "Opening current tunnel...";
         openEl.href = url.href;
         openEl.hidden = false;
-        window.setTimeout(() => window.location.replace(url.href), 350);
+
+        if (autoOpen) {
+          statusEl.textContent = target.updatedAt
+            ? `Opening tunnel updated ${new Date(target.updatedAt).toLocaleString()}...`
+            : "Opening current tunnel...";
+          window.setTimeout(() => window.location.replace(url.href), 350);
+        } else {
+          statusEl.textContent = target.updatedAt
+            ? `Ready. Current tunnel updated ${new Date(target.updatedAt).toLocaleString()}.`
+            : "Ready. Current tunnel is available.";
+        }
       } catch (error) {
         setFailure(`No live tunnel target is published yet. ${error.message}`);
       }
