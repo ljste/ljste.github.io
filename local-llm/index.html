@@ -272,8 +272,8 @@
     async function fetchTarget() {
       const errors = [];
       const loaders = [
-        () => fetchJson(rawTargetUrl),
         fetchApiTarget,
+        () => fetchJson(rawTargetUrl),
         () => fetchJson("./target.json"),
       ];
 
