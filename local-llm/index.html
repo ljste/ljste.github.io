@@ -92,11 +92,55 @@
     const statusEl = document.getElementById("status");
     const openEl = document.getElementById("open");
     const retryEl = document.getElementById("retry");
+    const rawTargetUrl = "https://raw.githubusercontent.com/ljste/ljste.github.io/main/local-llm/target.json";
+    const apiTargetUrl = "https://api.github.com/repos/ljste/ljste.github.io/contents/local-llm/target.json?ref=main";
 
     function setFailure(message) {
       statusEl.textContent = message;
       openEl.hidden = true;
       retryEl.hidden = false;
+    }
+
+    async function fetchJson(url) {
+      const response = await fetch(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "accept": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`${url} returned HTTP ${response.status}`);
+      }
+
+      return response.json();
+    }
+
+    async function fetchApiTarget() {
+      const payload = await fetchJson(apiTargetUrl);
+
+      if (payload.encoding !== "base64" || typeof payload.content !== "string") {
+        throw new Error("GitHub API returned an unexpected target payload.");
+      }
+
+      return JSON.parse(atob(payload.content.replace(/\s/g, "")));
+    }
+
+    async function fetchTarget() {
+      const errors = [];
+      const loaders = [
+        () => fetchJson(rawTargetUrl),
+        fetchApiTarget,
+        () => fetchJson("./target.json"),
+      ];
+
+      for (const load of loaders) {
+        try {
+          return await load();
+        } catch (error) {
+          errors.push(error.message);
+        }
+      }
+
+      throw new Error(errors.join(" | "));
     }
 
     async function openCurrentTunnel() {
@@ -105,16 +149,7 @@
       statusEl.textContent = "Finding the current tunnel...";
 
       try {
-        const response = await fetch(`./target.json?t=${Date.now()}`, {
-          cache: "no-store",
-          headers: { "accept": "application/json" },
-        });
-
-        if (!response.ok) {
-          throw new Error(`target.json returned HTTP ${response.status}`);
-        }
-
-        const target = await response.json();
+        const target = await fetchTarget();
         const url = new URL(target.url);
 
         if (url.protocol !== "https:") {
