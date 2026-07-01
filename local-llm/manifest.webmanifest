@@ -1,6 +1,6 @@
 {
-  "name": "Local LLM",
-  "short_name": "Local LLM",
+  "name": "Local AI",
+  "short_name": "Local AI",
   "start_url": "/local-llm/?install=1",
   "scope": "/local-llm/",
   "display": "standalone",
