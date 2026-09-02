@@ -170,14 +170,7 @@ const renderStartup = () => {
   appendLine("Microsoft Windows [Version 10.0.26100.3476]");
   appendLine("(c) Microsoft Corporation. All rights reserved.");
   appendLine();
-  appendLine("Lucas Steinmetz — software engineer", "section-label");
-  appendLine();
-  appendLine("I build software across systems, security, product engineering, and applied AI.");
-  appendLine("CS + Cybersecurity at Villanova University. Local AI enthusiast.");
-  appendLine();
   appendLine("Type 'help' for commands.");
-  appendLinkLine("GitHub:   ", "github.com/ljste", "https://github.com/ljste");
-  appendLinkLine("LinkedIn: ", "linkedin.com/in/lsteinm", "https://www.linkedin.com/in/lsteinm/");
   appendLine();
 };
 
