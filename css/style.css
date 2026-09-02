@@ -163,13 +163,14 @@ body {
   width: 0.6em;
   height: 1.2em;
   background: var(--cursor-color);
+  visibility: hidden;
   opacity: 0;
   pointer-events: none;
   animation: blink 1s step-end infinite;
 }
 
 #command:focus + #cursor {
-  opacity: 1;
+  visibility: visible;
 }
 
 a.output-link {
@@ -213,11 +214,5 @@ input:focus-visible {
 
   #terminal-output {
     max-height: calc(100svh - 4.75rem);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #cursor {
-    animation: none;
   }
 }
