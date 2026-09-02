@@ -3,7 +3,6 @@
     "id": "stowaway",
     "name": "stowaway",
     "year": "2025",
-    "categories": ["systems"],
     "stack": "Rust",
     "description": "Runs commands in a disposable HOME with deny-by-default macOS filesystem controls.",
     "url": "https://github.com/ljste/stowaway"
@@ -12,7 +11,6 @@
     "id": "gonuke",
     "name": "gonuke",
     "year": "2025",
-    "categories": ["systems"],
     "stack": "Go",
     "description": "Finds and terminates matching processes with dry runs, signals, and confirmations.",
     "url": "https://github.com/ljste/gonuke"
@@ -21,81 +19,17 @@
     "id": "rustproxy",
     "name": "rustproxy",
     "year": "2025",
-    "categories": ["systems"],
     "stack": "Rust · Tokio",
     "description": "Async TCP proxy with bidirectional hex dumps, file logging, and byte totals.",
     "url": "https://github.com/ljste/rustproxy"
   },
   {
-    "id": "depthshift",
-    "name": "DepthShift",
-    "year": "2025",
-    "categories": ["web", "experiments"],
-    "stack": "Three.js",
-    "description": "Three-level first-person maze game with character builds and a pathfinding chaser.",
-    "url": "https://ljste.github.io/DepthShift/"
-  },
-  {
-    "id": "reseller-hub",
-    "name": "Reseller Hub",
-    "year": "2025",
-    "categories": ["web"],
-    "stack": "JavaScript",
-    "description": "Marketplace fee, profit, target-pricing, and local sales-log calculator.",
-    "url": "https://github.com/ljste/ResellCalc"
-  },
-  {
-    "id": "recipe-manager",
-    "name": "Recipe Manager",
-    "year": "2025",
-    "categories": ["data"],
-    "stack": "Python · SQLite",
-    "description": "Recipe CRUD and search over a normalized relational schema.",
-    "url": "https://github.com/ljste/recipe-manager"
-  },
-  {
-    "id": "3d-portfolio",
-    "name": "3D Portfolio",
-    "year": "2025",
-    "categories": ["web", "experiments"],
-    "stack": "Three.js",
-    "description": "First-person interactive room with models, lighting, and a laptop sequence.",
-    "url": "https://ljste.github.io/3d-portfolio/"
-  },
-  {
-    "id": "pynetdiscover",
-    "name": "PyNetDiscover",
-    "year": "2024",
-    "categories": ["systems"],
-    "stack": "Python · Nmap",
-    "description": "Desktop network scanner for hosts, ports, OS hints, vendors, and latency.",
-    "url": "https://github.com/ljste/PyNetDiscover"
-  },
-  {
-    "id": "covid-forecasting",
-    "name": "COVID-19 Forecasting",
-    "year": "2024",
-    "categories": ["data"],
-    "stack": "Python · Keras",
-    "description": "RNN forecasting notebook using Our World in Data time-series data.",
-    "url": "https://github.com/ljste/CovidForecasting"
-  },
-  {
-    "id": "cca-chatbot",
-    "name": "CCA Chatbot",
-    "year": "2024",
-    "categories": ["web", "experiments"],
-    "stack": "HTML · JavaScript",
-    "description": "Career-center assistant frontend prototype with async backend integration.",
-    "url": "https://ljste.github.io/chatbot-site/"
-  },
-  {
     "id": "rocket-league-automation",
     "name": "Rocket League Automation",
     "year": "2024",
-    "categories": ["experiments"],
     "stack": "Python",
-    "description": "Documented desktop automation experiment using pixel detection and simulated input.",
-    "url": "https://github.com/ljste/Rocket-League-Script"
+    "description": "Desktop automation experiment using pixel detection and simulated input.",
+    "url": "https://github.com/ljste/Rocket-League-Script",
+    "aliases": ["rocket-league", "rocketleague", "rl-automation"]
   }
 ]

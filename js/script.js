@@ -55,6 +55,9 @@ const commandDescriptions = {
   work: "View selected professional work",
   projects: "List open-source projects",
   project: "Open a project (project open <name>)",
+  research: "View published research",
+  skills: "View languages and tools",
+  open: "Open a link (open <name>)",
   resume: "Open my resume",
   contact: "Show contact links",
   github: "Open my GitHub profile",
@@ -63,6 +66,67 @@ const commandDescriptions = {
 };
 
 const availableCommands = Object.keys(commandDescriptions);
+
+const externalLinks = {
+  github: {
+    label: "GitHub",
+    url: "https://github.com/ljste",
+  },
+  linkedin: {
+    label: "LinkedIn",
+    url: "https://www.linkedin.com/in/lsteinm/",
+  },
+  resume: {
+    label: "resume.pdf",
+    url: "downloads/resume.pdf",
+  },
+  textmaddie: {
+    label: "Text Maddie",
+    url: "https://www.textmaddie.com/",
+  },
+  studiortf: {
+    label: "Studio RTF",
+    url: "https://studiortf.com/",
+  },
+};
+
+const fallbackProjects = [
+  {
+    id: "stowaway",
+    name: "stowaway",
+    year: "2025",
+    stack: "Rust",
+    description: "Runs commands in a disposable HOME with deny-by-default macOS filesystem controls.",
+    url: "https://github.com/ljste/stowaway",
+  },
+  {
+    id: "gonuke",
+    name: "gonuke",
+    year: "2025",
+    stack: "Go",
+    description: "Finds and terminates matching processes with dry runs, signals, and confirmations.",
+    url: "https://github.com/ljste/gonuke",
+  },
+  {
+    id: "rustproxy",
+    name: "rustproxy",
+    year: "2025",
+    stack: "Rust · Tokio",
+    description: "Async TCP proxy with bidirectional hex dumps, file logging, and byte totals.",
+    url: "https://github.com/ljste/rustproxy",
+  },
+  {
+    id: "rocket-league-automation",
+    name: "Rocket League Automation",
+    year: "2024",
+    stack: "Python",
+    description: "Desktop automation experiment using pixel detection and simulated input.",
+    url: "https://github.com/ljste/Rocket-League-Script",
+    aliases: ["rocket-league", "rocketleague", "rl-automation"],
+  },
+];
+
+let projects = [...fallbackProjects];
 
 const appendLine = (text = "", className = "") => {
   const line = document.createElement("div");
@@ -165,12 +229,120 @@ const printAbout = () => {
   appendLine();
   appendLine("ABOUT", "section-label");
   appendLine("=====");
-  appendLine("Lucas Steinmetz is a software engineer and Computer Science student with a");
+  appendLine("I'm Lucas Steinmetz, a software engineer and Computer Science student with a");
   appendLine("Cybersecurity minor at Villanova University (B.S. expected May 2027).");
   appendLine();
-  appendLine("His work spans systems software, cloud security, data workflows, web products,");
-  appendLine("and applied AI. He is also a local AI enthusiast who enjoys running models");
-  appendLine("and experimenting with useful on-device workflows.");
+  appendLine("My work spans aerospace, institutional software, systems programming, cloud");
+  appendLine("security, web products, and applied AI. I'm also a local AI enthusiast who");
+  appendLine("enjoys running models and experimenting with useful on-device workflows.");
+  appendLine();
+};
+
+const printExperience = () => {
+  appendLine();
+  appendLine("ENGINEERING EXPERIENCE", "section-label");
+  appendLine("======================");
+  appendLine("Lockheed Martin Space");
+  appendLine("  Software Engineering Intern");
+  appendLine("  Software engineering within Lockheed Martin's Space business.", "muted-line");
+  appendLine();
+  appendLine("Dicastery for Communication · Vatican City                 Aug–Dec 2025");
+  appendLine("  Software Engineering Intern");
+  appendLine("  Software engineering for the Vatican's communications organization.", "muted-line");
+  appendLine();
+  appendLine("The Cigna Group                                                2025");
+  appendLine("  DevSecOps Engineer Intern");
+  appendLine("  Worked with Azure RBAC, Active Directory, Terraform, and cloud hardening.", "muted-line");
+  appendLine();
+  appendLine("Studio RTF");
+  appendLine("  Artisan");
+  appendLine("  Engineering across agents, apps, systems, and interfaces.", "muted-line");
+  appendLine();
+  appendLine("Type 'work' for selected product work or 'resume' for the full history.");
+  appendLine();
+};
+
+const printWork = () => {
+  appendLine();
+  appendLine("SELECTED PROFESSIONAL WORK", "section-label");
+  appendLine("==========================");
+  appendLine("Text Maddie");
+  appendLine("  Product engineering for an AI agent that reaches leads and customers through");
+  appendLine("  iMessage, handles follow-up, and books directly into calendars.");
+  appendLinkLine("  Website: ", "textmaddie.com", externalLinks.textmaddie.url);
+  appendLine();
+  appendLine("Studio RTF");
+  appendLine("  Building tailored agents, apps, systems, and interfaces for client workflows.");
+  appendLine("  The client portfolio books more than $4M in revenue each month.");
+  appendLinkLine("  Website: ", "studiortf.com", externalLinks.studiortf.url);
+  appendLine();
+};
+
+const printProjects = () => {
+  appendLine();
+  appendLine("OPEN-SOURCE PROJECTS", "section-label");
+  appendLine("====================");
+
+  projects.forEach((project) => {
+    appendLinkLine("  ", project.name, project.url, `  [${project.year} · ${project.stack}]`);
+    appendLine(`    ${project.description}`);
+  });
+
+  appendLine();
+  appendLine("Open one with 'project open <name>' or browse everything with 'github'.");
+  appendLine();
+};
+
+const findProject = (query) => {
+  const normalized = query.toLowerCase();
+  return projects.find((project) => (
+    project.id === normalized
+    || project.name.toLowerCase() === normalized
+    || project.aliases?.includes(normalized)
+  ));
+};
+
+const handleProject = (args) => {
+  if (args[0]?.toLowerCase() !== "open" || !args.slice(1).length) {
+    appendLine();
+    appendLine("Usage: project open <name>");
+    appendLine("Example: project open stowaway");
+    appendLine();
+    return;
+  }
+
+  const project = findProject(args.slice(1).join("-"));
+  appendLine();
+  if (!project) {
+    appendLine(`Project '${args.slice(1).join(" ")}' was not found.`);
+    appendLine("Type 'projects' to list project names.");
+  } else {
+    openExternal(project.url, project.name);
+  }
+  appendLine();
+};
+
+const printResearch = () => {
+  appendLine();
+  appendLine("RESEARCH", "section-label");
+  appendLine("========");
+  appendLine("Predicting Mortality and Functional Status Scores of Traumatic Brain Injury");
+  appendLine("Patients using Supervised Machine Learning");
+  appendLine("  Published by IEEE · Presented at IEEE CCWC 2025");
+  appendLine("  Evaluated 18 supervised-learning models on a clinical dataset of 300");
+  appendLine("  pediatric TBI patients to predict mortality and functional outcomes.");
+  appendLine();
+};
+
+const printSkills = () => {
+  appendLine();
+  appendLine("SKILLS", "section-label");
+  appendLine("======");
+  appendLine("  Languages      Python · Java · Go · Rust · TypeScript · JavaScript · SQL · C# · C++");
+  appendLine("  Product        React · Node.js · FastAPI · Flask · Django");
+  appendLine("  Cloud/Security AWS · Azure · GCP · Docker · Terraform · CI/CD · IAM");
+  appendLine("  Data           PostgreSQL · SQLite · Pandas · scikit-learn · Tableau");
+  appendLine("  AI             Agents · RAG · local models · vector databases · AI safety");
   appendLine();
 };
 
@@ -201,6 +373,37 @@ const handleTheme = (args) => {
   appendLine();
 };
 
+const handleOpen = (args) => {
+  const target = args[0]?.toLowerCase();
+  appendLine();
+
+  if (!target) {
+    appendLine(`Open targets: ${Object.keys(externalLinks).join(", ")}`);
+    appendLine("Usage: open textmaddie");
+  } else if (!externalLinks[target]) {
+    appendLine(`Open target '${target}' was not found.`);
+    appendLine(`Available targets: ${Object.keys(externalLinks).join(", ")}`);
+  } else {
+    openExternal(externalLinks[target].url, externalLinks[target].label);
+  }
+
+  appendLine();
+};
+
+const loadProjects = async () => {
+  try {
+    const response = await fetch("data/projects.json", { cache: "no-cache" });
+    if (!response.ok) throw new Error(`Project data returned ${response.status}`);
+    const projectData = await response.json();
+    if (!Array.isArray(projectData) || projectData.length === 0) {
+      throw new Error("Project data was empty");
+    }
+    projects = projectData;
+  } catch (error) {
+    console.warn("Using embedded project data:", error);
+  }
+};
+
 const processCommand = (rawCommand) => {
   const command = rawCommand.trim();
   appendCommandLine(command);
@@ -215,6 +418,27 @@ const processCommand = (rawCommand) => {
       break;
     case "about":
       printAbout();
+      break;
+    case "experience":
+      printExperience();
+      break;
+    case "work":
+      printWork();
+      break;
+    case "projects":
+      printProjects();
+      break;
+    case "project":
+      handleProject(args);
+      break;
+    case "research":
+      printResearch();
+      break;
+    case "skills":
+      printSkills();
+      break;
+    case "open":
+      handleOpen(args);
       break;
     case "contact":
       printContact();
@@ -234,14 +458,6 @@ const processCommand = (rawCommand) => {
       break;
     case "clear":
       renderStartup();
-      break;
-    case "experience":
-    case "work":
-    case "projects":
-    case "project":
-      appendLine();
-      appendLine("This command is being indexed. Try 'about', 'contact', or 'github'.", "muted-line");
-      appendLine();
       break;
     default:
       appendLine();
@@ -314,5 +530,6 @@ terminalElement.addEventListener("click", (event) => {
 
 renderStartup();
 applyTheme("default");
+loadProjects();
 historyIndex = commandHistory.length;
 updateCursorPosition();
