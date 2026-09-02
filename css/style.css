@@ -297,6 +297,12 @@ svg {
   background: var(--surface);
 }
 
+.case-copy,
+.workflow-panel,
+.studio-details {
+  min-width: 0;
+}
+
 .impact-panel {
   min-height: 24rem;
   display: flex;
@@ -851,7 +857,7 @@ svg {
 
   .case-study-primary,
   .case-study-secondary {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .workflow-panel {
