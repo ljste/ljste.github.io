@@ -222,7 +222,7 @@ svg {
 }
 
 .hero-summary {
-  max-width: 58ch;
+  max-width: 50ch;
   margin: clamp(2rem, 4vw, 3.25rem) 0 0;
   color: #d6d5d0;
   font-size: clamp(1rem, 1.5vw, 1.28rem);
@@ -308,6 +308,7 @@ svg {
 }
 
 .impact-panel {
+  align-self: start;
   min-height: 24rem;
   display: flex;
   flex-direction: column;
