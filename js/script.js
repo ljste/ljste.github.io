@@ -50,8 +50,8 @@ const themes = {
 
 const commandDescriptions = {
   help: "Show available commands",
-  whoami: "Show a short introduction",
-  about: "Read a short introduction",
+  whoami: "Show identity at a glance",
+  about: "Read the full introduction",
   experience: "View engineering experience",
   work: "View selected professional work",
   projects: "List open-source projects",
@@ -228,6 +228,14 @@ const printAbout = () => {
   appendLine("My work spans aerospace, institutional software, systems programming, cloud");
   appendLine("security, web products, and applied AI. I'm also a local AI enthusiast who");
   appendLine("enjoys running models and experimenting with useful on-device workflows.");
+  appendLine();
+};
+
+const printWhoami = () => {
+  appendLine();
+  appendLine("Lucas Steinmetz");
+  appendLine("Software engineer · Computer Science + Cybersecurity at Villanova University");
+  appendLine("Aerospace · systems · security · product engineering · applied AI");
   appendLine();
 };
 
@@ -410,8 +418,10 @@ const processCommand = (rawCommand) => {
       printHelp();
       break;
     case "about":
-    case "whoami":
       printAbout();
+      break;
+    case "whoami":
+      printWhoami();
       break;
     case "experience":
       printExperience();
