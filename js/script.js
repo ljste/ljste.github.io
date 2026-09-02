@@ -107,9 +107,10 @@ const trackCurrentSection = () => {
   if (!("IntersectionObserver" in window)) return;
 
   const linksBySection = new Map(navLinks.map((link) => [link.hash.slice(1), link]));
-  const sections = [...linksBySection.keys()]
-    .map((id) => document.getElementById(id))
-    .filter(Boolean);
+  const sections = [
+    document.getElementById("top"),
+    ...[...linksBySection.keys()].map((id) => document.getElementById(id)),
+  ].filter(Boolean);
 
   const observer = new IntersectionObserver((entries) => {
     const visible = entries
@@ -117,8 +118,9 @@ const trackCurrentSection = () => {
       .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 
     if (!visible) return;
+    const currentHash = visible.target.id === "top" ? null : `#${visible.target.id}`;
     navLinks.forEach((link) => {
-      const isCurrent = link.hash === `#${visible.target.id}`;
+      const isCurrent = link.hash === currentHash;
       link.classList.toggle("is-current", isCurrent);
       if (isCurrent) link.setAttribute("aria-current", "location");
       else link.removeAttribute("aria-current");
