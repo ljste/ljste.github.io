@@ -187,12 +187,12 @@ svg {
 }
 
 .hero {
-  min-height: clamp(42rem, calc(100svh - 6.75rem), 54rem);
+  min-height: clamp(42rem, calc(100svh - 6.75rem), 48rem);
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.9fr);
   align-items: center;
   gap: clamp(3rem, 7vw, 8rem);
-  padding-block: clamp(5rem, 9vw, 8.5rem);
+  padding-block: clamp(5rem, 7vw, 6rem);
 }
 
 .hero-copy {
@@ -355,6 +355,7 @@ svg {
 
 #work {
   border-top: 1px solid var(--line-strong);
+  padding-top: 2.5rem;
 }
 
 .section-title-row {
