@@ -50,6 +50,7 @@ const themes = {
 
 const commandDescriptions = {
   help: "Show available commands",
+  whoami: "Show a short introduction",
   about: "Read a short introduction",
   experience: "View engineering experience",
   work: "View selected professional work",
@@ -417,6 +418,7 @@ const processCommand = (rawCommand) => {
       printHelp();
       break;
     case "about":
+    case "whoami":
       printAbout();
       break;
     case "experience":
@@ -457,6 +459,7 @@ const processCommand = (rawCommand) => {
       handleTheme(args);
       break;
     case "clear":
+    case "cls":
       renderStartup();
       break;
     default:
@@ -472,13 +475,33 @@ const processCommand = (rawCommand) => {
 
 const completeCommand = () => {
   const value = commandInput.value;
-  const normalized = value.toLowerCase().trimStart();
-  if (!normalized || normalized.includes(" ")) return;
+  const normalized = value.toLowerCase().trim();
+  if (!normalized) return;
 
-  const matches = availableCommands.filter((command) => command.startsWith(normalized));
-  if (matches.length === 1) {
-    commandInput.value = matches[0];
-    commandInput.setSelectionRange(matches[0].length, matches[0].length);
+  const finish = (completed) => {
+    commandInput.value = completed;
+    commandInput.setSelectionRange(completed.length, completed.length);
+  };
+
+  if (!normalized.includes(" ")) {
+    const matches = availableCommands.filter((command) => command.startsWith(normalized));
+    if (matches.length === 1) finish(matches[0]);
+    return;
+  }
+
+  const [command, ...args] = normalized.split(/\s+/);
+  const partial = args.at(-1) ?? "";
+
+  if (command === "theme") {
+    const themePrefix = partial.replace(/^--/, "");
+    const matches = Object.keys(themes).filter((name) => name.startsWith(themePrefix));
+    if (matches.length === 1) finish(`theme --${matches[0]}`);
+  } else if (command === "open") {
+    const matches = Object.keys(externalLinks).filter((name) => name.startsWith(partial));
+    if (matches.length === 1) finish(`open ${matches[0]}`);
+  } else if (command === "project" && args[0] === "open") {
+    const matches = projects.map((project) => project.id).filter((name) => name.startsWith(partial));
+    if (matches.length === 1) finish(`project open ${matches[0]}`);
   }
 };
 

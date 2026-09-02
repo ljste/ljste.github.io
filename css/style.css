@@ -81,6 +81,20 @@ body {
   scrollbar-color: var(--text-color) var(--bg-color);
 }
 
+#terminal-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+#terminal-output::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+#terminal-output::-webkit-scrollbar-thumb {
+  border: 2px solid var(--bg-color);
+  border-radius: 4px;
+  background: var(--text-color);
+}
+
 #terminal-output .output-line,
 #terminal-output .command-line {
   display: block;
