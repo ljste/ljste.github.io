@@ -170,7 +170,6 @@ const renderStartup = () => {
   appendLine("Microsoft Windows [Version 10.0.26100.3476]");
   appendLine("(c) Microsoft Corporation. All rights reserved.");
   appendLine();
-  appendCommandLine("whoami");
   appendLine("Lucas Steinmetz — software engineer", "section-label");
   appendLine();
   appendLine("I build software across systems, security, product engineering, and applied AI.");
