@@ -332,6 +332,11 @@ const printResearch = () => {
   appendLine("  Published by IEEE · Presented at IEEE CCWC 2025");
   appendLine("  Evaluated 18 supervised-learning models on a clinical dataset of 300");
   appendLine("  pediatric TBI patients to predict mortality and functional outcomes.");
+  appendLinkLine(
+    "  Paper: ",
+    "ieeexplore.ieee.org/document/10903785",
+    "https://ieeexplore.ieee.org/document/10903785",
+  );
   appendLine();
 };
 
