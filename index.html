@@ -1,22 +1,246 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Lucas's Command Prompt</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lucas Steinmetz — AI Systems &amp; Product Engineering</title>
+  <meta name="description" content="Lucas Steinmetz builds production AI systems, product interfaces, and open-source systems tools. Artisan at Studio RTF and product engineer on Text Maddie.">
+  <meta name="theme-color" content="#050505">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://ljste.github.io/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Inter:wght@500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ljste.github.io/">
+  <meta property="og:title" content="Lucas Steinmetz — AI Systems &amp; Product Engineering">
+  <meta property="og:description" content="Production AI systems, product interfaces, and open-source systems work.">
+  <meta property="og:site_name" content="Lucas Steinmetz">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Lucas Steinmetz — AI Systems &amp; Product Engineering">
+  <meta name="twitter:description" content="Production AI systems, product interfaces, and open-source systems work.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Lucas Steinmetz",
+    "url": "https://ljste.github.io/",
+    "sameAs": [
+      "https://github.com/ljste",
+      "https://www.linkedin.com/in/lsteinm/"
+    ],
+    "affiliation": [
+      { "@type": "Organization", "name": "Studio RTF", "url": "https://studiortf.com/" },
+      { "@type": "CollegeOrUniversity", "name": "Villanova University" }
+    ],
+    "knowsAbout": ["Artificial intelligence", "Software engineering", "Cybersecurity", "Rust", "Go", "TypeScript"]
+  }
+  </script>
 </head>
 <body>
-  <div class="terminal">
-    <div id="terminal-output"></div>
-    <div id="input-line">
-      <span class="prompt">C:\Users\visitor></span>
-      <div id="input-wrapper">
-        <input id="command" type="text" autocomplete="off" spellcheck="false" autofocus>
-        <span id="cursor"></span>
-      </div>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="brand" href="#top" aria-label="Lucas Steinmetz, home">
+        lucas.steinmetz<span class="brand-cursor" aria-hidden="true"></span>
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#work">Work</a>
+        <a href="#archive">Archive</a>
+        <a href="#about">About</a>
+      </nav>
+      <a class="header-cta" href="mailto:lsteinme@villanova.edu">Email me</a>
     </div>
-  </div>
-  <script src="js/script.js"></script>
+  </header>
+
+  <main id="main-content">
+    <section class="hero shell" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <h1 id="hero-title">I build AI systems that turn conversations into outcomes.<span class="cursor-block" aria-hidden="true"></span></h1>
+        <p class="hero-summary">At Studio RTF, I work on Text Maddie—an iMessage-native outreach agent for leads, customers, and follow-up.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#work">
+            See the work
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="button button-secondary" href="https://github.com/ljste" target="_blank" rel="noopener noreferrer">
+            GitHub
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 5h5v5M10 14 19 5M19 13v6H5V5h6"/></svg>
+          </a>
+        </div>
+        <p class="identity-line">CS + Cybersecurity <span aria-hidden="true">·</span> Villanova University</p>
+      </div>
+
+      <aside class="impact-panel" aria-label="Monthly client portfolio impact">
+        <p class="terminal-command"><span aria-hidden="true">$</span> impact --monthly</p>
+        <p class="impact-value">$4M+</p>
+        <p class="impact-label">client revenue booked<br>across the portfolio</p>
+        <span class="terminal-prompt" aria-hidden="true"></span>
+      </aside>
+    </section>
+
+    <section class="section shell" id="work" aria-labelledby="work-heading">
+      <div class="section-title-row">
+        <h2 id="work-heading">Selected work<span class="cursor-small" aria-hidden="true"></span></h2>
+        <span class="section-rule" aria-hidden="true"></span>
+        <span class="section-cross" aria-hidden="true"></span>
+      </div>
+
+      <article class="case-study case-study-primary">
+        <div class="case-copy">
+          <h3>Text Maddie<span class="prompt-mark" aria-hidden="true"> &gt;_</span></h3>
+          <p class="case-role">Product engineering <span aria-hidden="true">·</span> Studio RTF</p>
+          <p class="case-description">An iMessage-native outreach agent for leads, customers, and follow-up—built to move conversations toward booked outcomes.</p>
+          <ul class="tag-list" aria-label="Text Maddie focus areas">
+            <li>Agents</li>
+            <li>iMessage</li>
+            <li>Automation</li>
+            <li>Production systems</li>
+          </ul>
+          <a class="text-link" href="https://studiortf.com/#workshop" target="_blank" rel="noopener noreferrer">
+            View Studio RTF
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+
+        <div class="workflow-panel" aria-label="Text Maddie workflow: Lead to iMessage to Maddie to Booking">
+          <p class="terminal-command"><span aria-hidden="true">$</span> workflow</p>
+          <div class="workflow">
+            <div class="workflow-step">
+              <svg aria-hidden="true" viewBox="0 0 48 48"><circle cx="24" cy="16" r="8"/><path d="M10 40c1-10 6-15 14-15s13 5 14 15"/></svg>
+              <span>Lead</span>
+            </div>
+            <svg class="workflow-arrow" aria-hidden="true" viewBox="0 0 32 24"><path d="M2 12h25M21 6l6 6-6 6"/></svg>
+            <div class="workflow-step">
+              <svg aria-hidden="true" viewBox="0 0 48 48"><path d="M9 11h30a5 5 0 0 1 5 5v14a5 5 0 0 1-5 5H25l-9 7v-7H9a5 5 0 0 1-5-5V16a5 5 0 0 1 5-5Z"/></svg>
+              <span>iMessage</span>
+            </div>
+            <svg class="workflow-arrow" aria-hidden="true" viewBox="0 0 32 24"><path d="M2 12h25M21 6l6 6-6 6"/></svg>
+            <div class="workflow-step">
+              <svg aria-hidden="true" viewBox="0 0 48 48"><rect x="9" y="13" width="30" height="25" rx="7"/><path d="M24 7v6M21 6h6M4 22h5M39 22h5"/><circle cx="19" cy="25" r="1.5"/><circle cx="29" cy="25" r="1.5"/><path d="M19 32h10"/></svg>
+              <span>Maddie</span>
+            </div>
+            <svg class="workflow-arrow" aria-hidden="true" viewBox="0 0 32 24"><path d="M2 12h25M21 6l6 6-6 6"/></svg>
+            <div class="workflow-step">
+              <svg aria-hidden="true" viewBox="0 0 48 48"><rect x="6" y="10" width="36" height="32" rx="3"/><path d="M6 20h36M15 5v10M33 5v10"/></svg>
+              <span>Booking</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="case-study case-study-secondary">
+        <div class="case-copy">
+          <h3>Studio RTF client systems<span class="prompt-mark" aria-hidden="true"> &gt;_</span></h3>
+          <p class="case-role">Artisan</p>
+          <p class="case-description">Bespoke agents, apps, systems, and interfaces for businesses with workflows that off-the-shelf software cannot fit.</p>
+        </div>
+        <div class="studio-details">
+          <ul class="studio-disciplines" aria-label="Studio RTF disciplines">
+            <li>Agents</li>
+            <li>Apps</li>
+            <li>Systems</li>
+            <li>Interfaces</li>
+          </ul>
+          <a class="text-link" href="https://studiortf.com/" target="_blank" rel="noopener noreferrer">
+            Visit the studio
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+      </article>
+
+      <div class="open-source-rail" aria-label="Featured open-source projects">
+        <span class="rail-label">$ open-source</span>
+        <a href="https://github.com/ljste/stowaway" target="_blank" rel="noopener noreferrer">stowaway <span aria-hidden="true">↗</span></a>
+        <a href="https://github.com/ljste/gonuke" target="_blank" rel="noopener noreferrer">gonuke <span aria-hidden="true">↗</span></a>
+        <a href="https://github.com/ljste/rustproxy" target="_blank" rel="noopener noreferrer">rustproxy <span aria-hidden="true">↗</span></a>
+        <a class="rail-archive" href="#archive">Archive <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <section class="section shell archive-section" id="archive" aria-labelledby="archive-heading">
+      <div class="archive-intro">
+        <h2 id="archive-heading">Project archive<span class="cursor-small" aria-hidden="true"></span></h2>
+        <p>Open-source tools, web experiments, and data projects.</p>
+      </div>
+
+      <div class="archive-toolbar">
+        <div class="filters" role="group" aria-label="Filter projects">
+          <button class="filter-button is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="filter-button" type="button" data-filter="systems" aria-pressed="false">Systems</button>
+          <button class="filter-button" type="button" data-filter="web" aria-pressed="false">Web</button>
+          <button class="filter-button" type="button" data-filter="data" aria-pressed="false">Data</button>
+          <button class="filter-button" type="button" data-filter="experiments" aria-pressed="false">Experiments</button>
+        </div>
+        <p class="archive-count" id="archive-count" aria-live="polite">Loading projects…</p>
+      </div>
+
+      <div class="project-table" id="project-table" aria-label="Project archive">
+        <div class="project-header" aria-hidden="true">
+          <span>Project</span>
+          <span>Year</span>
+          <span>Stack</span>
+          <span>What it does</span>
+          <span></span>
+        </div>
+        <div class="project-loading">Loading verified public work…</div>
+      </div>
+      <noscript>
+        <p class="noscript-note">JavaScript is required for the filterable archive. <a href="https://github.com/ljste">View all repositories on GitHub.</a></p>
+      </noscript>
+      <a class="text-link archive-github" href="https://github.com/ljste?tab=repositories" target="_blank" rel="noopener noreferrer">
+        View all repositories on GitHub
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </section>
+
+    <section class="section shell about-section" id="about" aria-labelledby="about-heading">
+      <h2 id="about-heading">About<span class="cursor-small" aria-hidden="true"></span></h2>
+      <div class="about-copy">
+        <p>I'm a computer science and cybersecurity student at Villanova University and an artisan at Studio RTF. I build software close to the user: agents in existing communication channels, sharp interfaces, and systems tools that make hard workflows simpler.</p>
+        <p>Outside production work, I'm a local AI enthusiast—running models, experimenting with local clients, and learning where on-device intelligence is genuinely useful.</p>
+      </div>
+
+      <div class="capabilities" aria-labelledby="capabilities-heading">
+        <h3 id="capabilities-heading">Capabilities<span class="cursor-small" aria-hidden="true"></span></h3>
+        <div class="capability-row">
+          <span class="capability-number">01</span>
+          <span class="capability-name">Product engineering</span>
+          <span class="capability-stack">React · TypeScript · Next.js · Tailwind</span>
+        </div>
+        <div class="capability-row">
+          <span class="capability-number">02</span>
+          <span class="capability-name">Systems</span>
+          <span class="capability-stack">Rust · Go · Node.js · PostgreSQL</span>
+        </div>
+        <div class="capability-row">
+          <span class="capability-number">03</span>
+          <span class="capability-name">AI + delivery</span>
+          <span class="capability-stack">Local models · Agents · Docker · AWS · Git</span>
+        </div>
+      </div>
+
+      <div class="contact-block">
+        <h3>Let's build something useful.<span class="cursor-block" aria-hidden="true"></span></h3>
+        <div class="contact-links">
+          <a href="mailto:lsteinme@villanova.edu">Email <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/ljste" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+          <a href="https://www.linkedin.com/in/lsteinm/" target="_blank" rel="noopener noreferrer">LinkedIn <span aria-hidden="true">↗</span></a>
+          <a href="downloads/resume.pdf" target="_blank" rel="noopener noreferrer">Résumé <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer shell">
+    <p>© 2026 Lucas Steinmetz</p>
+    <p>Philadelphia</p>
+  </footer>
+
+  <script src="js/script.js" defer></script>
 </body>
 </html>
