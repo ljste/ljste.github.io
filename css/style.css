@@ -200,14 +200,18 @@ svg {
 }
 
 .hero h1 {
-  max-width: 13ch;
+  max-width: 16ch;
   margin: 0;
   font-family: var(--sans);
-  font-size: clamp(3.15rem, 6.1vw, 6.35rem);
+  font-size: clamp(3.15rem, 5.4vw, 5.75rem);
   font-weight: 700;
   letter-spacing: -0.065em;
   line-height: 0.98;
   text-wrap: balance;
+}
+
+.hero-line {
+  display: block;
 }
 
 .cursor-block {
@@ -917,6 +921,10 @@ svg {
 
   .hero h1 {
     max-width: 12ch;
+  }
+
+  .hero-line {
+    display: inline;
   }
 
   .impact-panel {
